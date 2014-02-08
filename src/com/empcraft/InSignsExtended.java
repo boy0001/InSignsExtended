@@ -1002,7 +1002,14 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
         try {
         	ScriptEngineManager mgr = new ScriptEngineManager();
         	ScriptEngine engine = mgr.getEngineByName("JavaScript");
-        	Object toreturn =  engine.eval(line);
+        	Object toreturn;
+        	if ((line.contains(".js"))&&(line.contains(" ")==false)) {
+        		File file = new File(getDataFolder() + File.separator + "scripts" + File.separator + line);
+        		toreturn = engine.eval(new java.io.FileReader(file));
+        	}
+        	else {
+        		toreturn =  engine.eval(line);
+        	}
         	try {
         		Double num = (Double) toreturn;
         		if (Math.ceil(num) == Math.floor(num)) {
@@ -1640,6 +1647,8 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
         }
         File f8 = new File(getDataFolder() + File.separator+"scripts"+File.separator+"example.yml");
         if(f8.exists()!=true) {  saveResource("scripts"+File.separator+"example.yml", false); }
+        File f9 = new File(getDataFolder() + File.separator+"scripts"+File.separator+"test.js");
+        if(f9.exists()!=true) {  saveResource("scripts"+File.separator+"test.js", false); }
         File f1 = new File(getDataFolder() + File.separator + "scripts");
         File[] mysigns = f1.listFiles();
         for (int i = 0; i < mysigns.length; i++) {
