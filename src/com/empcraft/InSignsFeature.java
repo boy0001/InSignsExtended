@@ -11,7 +11,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.plugin.Plugin;
 
 
-public class InSignsFeature  implements Listener {	
+public class InSignsFeature  implements Listener {
 	Plugin insignsPlugin;
 	InSignsExtended plugin;
 		

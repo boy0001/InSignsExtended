@@ -512,6 +512,9 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     		Location loc = getloc(mysplit[0], user);
     		return ""+loc.getWorld().getPlayers();
     	}
+    	else if (line.contains("{colors}")) {
+    		return "&1,&2,&3,&4,&5,&6,&7,&8,&9,&0,&a,&b,&c,&d,&e,&f,&r,&l,&m,&n,&o,&k";
+    	}
     	else if (line.contains("{difficulty:")) {
     		Location loc = getloc(mysplit[0], user);
     		return loc.getWorld().getDifficulty().toString();
