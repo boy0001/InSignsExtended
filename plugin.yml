@@ -1,10 +1,10 @@
 name: InSignsPlus
 main: com.empcraft.InSignsExtended
-version: 0.3.0
+version: 0.4.0
 author: Empire92
 website: www.empcraft.com
 softdepend: [InSigns]
-depend: [Vault,ProtocolLib,InSigns]
+depend: [Vault,ProtocolLib]
 commands:
    isp:
       description: InSignsPlus commands.

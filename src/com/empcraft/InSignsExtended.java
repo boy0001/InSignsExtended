@@ -25,18 +25,32 @@ import org.apache.commons.lang.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
+import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.ProtocolLibrary;
+import com.comphenix.protocol.ProtocolManager;
+import com.comphenix.protocol.events.ListenerPriority;
+import com.comphenix.protocol.events.PacketAdapter;
+import com.comphenix.protocol.events.PacketContainer;
+import com.comphenix.protocol.events.PacketEvent;
+
 
 public final class InSignsExtended extends JavaPlugin implements Listener {
 	public boolean isenabled = false;
@@ -54,8 +68,11 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 	public long timerstart = 0;
 	public boolean islagging = false;
 	public int timerlast = 0;
+	private static ProtocolManager protocolmanager;
 	InSignsExtended plugin;
 	InSignsFeature isf;
+	public ScriptEngine engine = (new ScriptEngineManager()).getEngineByName("JavaScript");
+	
 	public Location getloc(String string,Player user) {
 		if (string.contains(",")==false) {
 			Player player = Bukkit.getPlayer(string);
@@ -478,7 +495,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     		return mysplit[1].replace(mysplit[2], mysplit[3]);
     	}
     	else if (line.contains("{config:")) {
-    		return plugin.getConfig().getString(mysplit[1]);
+    		return getConfig().getString(mysplit[1]);
     	}
     	else if (line.contains("{structures:")) {
     		Location loc = getloc(mysplit[0], user);
@@ -884,7 +901,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     		}
         }
     	Set<String> custom = null;
-    	FileConfiguration myconfig = plugin.getConfig();
+    	FileConfiguration myconfig = getConfig();
 		custom = myconfig.getConfigurationSection("signs.placeholders").getKeys(false);
     	if (custom.size()>0) {
     		for (String mycustom:custom) {
@@ -903,7 +920,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 	    			return result;
 	    			}
 	    			catch (Exception e) {
-	    				System.out.println("F "+e);
+//	    				System.out.println("F "+e);
 	    			}
     			}
     		}
@@ -1003,8 +1020,6 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     }
 	public String javascript(String line) {
         try {
-        	ScriptEngineManager mgr = new ScriptEngineManager();
-        	ScriptEngine engine = mgr.getEngineByName("JavaScript");
         	Object toreturn;
         	if ((line.contains(".js"))&&(line.contains(" ")==false)) {
         		File file = new File(getDataFolder() + File.separator + "scripts" + File.separator + line);
@@ -1061,7 +1076,8 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 		}
 	}
 	public boolean iswhitelisted(String lines) {
-		List<String> mylist= plugin.getConfig().getStringList("signs.autoupdate.whitelist");
+//		System.out.println("WHITELIST "+lines);
+		List<String> mylist= getConfig().getStringList("signs.autoupdate.whitelist");
 		for(String current:mylist){
 			if(lines.contains("{"+current+"}")) {
 				return true;
@@ -1185,7 +1201,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     				if (checkperm(player,"insignsplus.save")) {
     					getConfig().getConfigurationSection("scripting").set("variables", null);
     					counter2 = 0;
-        				System.out.println("[SignRanksPlus] Saving variables...");
+        				System.out.println("[InSignsPlus] Saving variables...");
         		        for (final Entry<String, Object> node : globals.entrySet()) {
         		        	getConfig().options().copyDefaults(true);
         		        	getConfig().set("scripting.variables."+(""+node.getKey()).substring(1,(""+node.getKey()).length()-1), (""+node.getValue()));
@@ -1204,7 +1220,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     			}
     		}
     		if (failed) {
-    			msg(player,"&7Commands:\n&7 - &a/ise reload\n&7 - &a/ise save");
+    			msg(player,"&7Commands:\n&7 - &a/isp reload\n&7 - &a/isp save");
     		}
     	}
     	return true;
@@ -1263,8 +1279,6 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     		splittype = 1;
     	}
     	boolean toreturn = false;
-    	ScriptEngineManager mgr = new ScriptEngineManager();
-    	ScriptEngine engine = mgr.getEngineByName("JavaScript");
     	String left = args[0].trim();
     	String right = args[1].trim();
     	try {
@@ -1396,7 +1410,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
             				mytest+=mycmds[j]+";";
             			}
             			else {
-            				System.out.println("END "+mycmds[j]);
+//            				System.out.println("END "+mycmds[j]);
             			}
             			if ((depth2 == 0)||(j==mycmds.length-1)) {
             				if (cmdargs[1].contains(":")) {
@@ -1630,6 +1644,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 
 	@Override
     public void onEnable(){
+		protocolmanager = ProtocolLibrary.getProtocolManager();
 		plugin = this;
         if (!setupEconomy() ) {
             log.severe(String.format("[%s] - Disabled due to no Vault dependency found!", getDescription().getName()));
@@ -1638,7 +1653,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
         }
         saveResource("english.yml", true);
         Plugin insignsPlugin = getServer().getPluginManager().getPlugin("InSigns");
-        if((insignsPlugin != null) && insignsPlugin.isEnabled()&&getServer().getPluginManager().getPlugin("SignRanksPlus")==null) {
+        if((insignsPlugin != null) && insignsPlugin.isEnabled()) {
         	if (getConfig().getBoolean("signs.autoupdate.enabled")) {
         		isenabled = true;
         	}
@@ -1646,7 +1661,8 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
             getServer().getPluginManager().registerEvents(isf,this);
             System.out.println("Plugin 'InSigns' found. Using it now.");
         } else {
-            System.out.println("Plugin 'InSigns' not found. Additional sign features disabled.");
+            System.out.println("Plugin 'InSigns' not found. Additional features disabled.");
+            isenabled = true;
         }
         File f8 = new File(getDataFolder() + File.separator+"scripts"+File.separator+"example.yml");
         if(f8.exists()!=true) {  saveResource("scripts"+File.separator+"example.yml", false); }
@@ -1665,12 +1681,107 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
         		}
         	}
         }
-        
-        
-        
+        if (isf==null) {
+	        protocolmanager.addPacketListener(new PacketAdapter(this, ListenerPriority.LOW, new PacketType[] { PacketType.Play.Server.UPDATE_SIGN })
+	        {
+	          public void onPacketSending(PacketEvent event)
+	          {
+	            PacketContainer packet = event.getPacket();
+	            packet = packet.shallowClone();
+	            int packetx = (packet.getIntegers().read(0)).intValue();
+	            short packety = (packet.getIntegers().read(1)).shortValue();
+	            int packetz = (packet.getIntegers().read(2)).intValue();
+	            Player player = event.getPlayer();
+	            Location loc = new Location(player.getWorld(), packetx,packety,packetz);
+	            
+	            Sign sign = (Sign) (loc.getBlock().getState());
+//	            System.out.println("LOC "+loc.toString()+" | "+loc.getBlock().getData());
+//	            System.out.println("LN "+StringUtils.join(sign.getLines()));
+	            String[] lines = sign.getLines();
+	            String unmodified = StringUtils.join(sign.getLines());
+	            if (list.contains(loc)==false) {
+//	            	System.out.println(1+" "+StringUtils.join(lines));
+					boolean modified = false;
+					if (lines[0].equals("")==false) {
+						String result = evaluate(lines[0],player,player, false);
+						if (result.equals(lines[0])==false) {
+							lines[0] = colorise(result);
+							modified = true;
+						}
+					}
+					if (lines[1].equals("")==false) {
+						String result = evaluate(lines[1],player,player, false);
+						if (result.equals(lines[1])==false) {
+							lines[1] = colorise(result);
+							modified = true;
+						}
+					}
+					if (lines[2].equals("")==false) {
+						String result = evaluate(lines[2],player,player, false);
+						if (result.equals(lines[2])==false) {
+							lines[2] = colorise(result);
+							modified = true;
+						}
+					}
+					if (lines[3].equals("")==false) {
+						String result = evaluate(lines[3],player,player, false);
+						if (result.equals(lines[3])==false) {
+							lines[3] = colorise(result);
+							modified = true;
+						}
+					}
+					if (modified==true) {
+//						System.out.println(2+" "+unmodified);
+						for (int i = 0; i < 4; i++) {
+		            		if (lines[i].length()>15) {
+			            		if ((i < 4)) {
+			            			if (lines[i+1].isEmpty()) {
+			            				lines[i+1] = lines[i].substring(15);
+			            			}
+			            		}
+			            		lines[i] = lines[i].substring(0,15);
+		            		}
+		            	}
+						if(iswhitelisted(unmodified)) {
+							isadd(player, loc);
+//							System.out.println("LINES "+unmodified);
+							packet.getStringArrays().write(0, lines);
+			    			event.setPacket(packet);
+						}
+						else {
+							packet.getStringArrays().write(0, lines);
+			    			event.setPacket(packet);
+						}
+					}
+					else {
+//						System.out.println(3);
+					}
+	            }
+	            else {
+	            	lines[0] = colorise(evaluate(lines[0],player,player, false));
+	            	lines[1] = colorise(evaluate(lines[1],player,player, false));
+	            	lines[2] = colorise(evaluate(lines[2],player,player, false));
+	            	lines[3] = colorise(evaluate(lines[3],player,player, false));
+	            	for (int i = 0; i < 4; i++) {
+	            		if (lines[i].length()>15) {
+		            		if ((i < 4)) {
+		            			if (lines[i+1].isEmpty()) {
+		            				lines[i+1] = lines[i].substring(15);
+		            			}
+		            		}
+		            		lines[i] = lines[i].substring(0,15);
+	            		}
+	            	}
+//	            	System.out.println("LINES "+StringUtils.join(lines));
+	            	packet.getStringArrays().write(0, lines);
+	    			event.setPacket(packet);
+	            }
+	          }
+	        });
+        }
         getConfig().options().copyDefaults(true);
         final Map<String, Object> options = new HashMap<String, Object>();
-        getConfig().set("version", "0.3.0");
+        getConfig().set("version", "0.4.0");
         options.put("signs.autoupdate.enabled",true);
         options.put("signs.autoupdate.buffer",1000);
         options.put("signs.autoupdate.updates-per-milli",1);
@@ -1729,7 +1840,23 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 								if (sign!=null) {
 									double dist = loc.distanceSquared(player.getLocation());
 					            if (dist<96) {
-					            	isf.sendSignChange(player,sign);
+//					            	System.out.println("UPDATING");
+					            	if (isf==null) {
+					            	PacketContainer packet = protocolmanager.createPacket(PacketType.Play.Server.UPDATE_SIGN);
+					            	try {
+					            		packet.getSpecificModifier(Integer.TYPE).write(0, Integer.valueOf(sign.getX()));
+					            		packet.getSpecificModifier(Integer.TYPE).write(1, Integer.valueOf(sign.getY()));
+					            		packet.getSpecificModifier(Integer.TYPE).write(2, Integer.valueOf(sign.getZ()));
+					            		packet.getStringArrays().write(0, sign.getLines());
+					            		protocolmanager.sendServerPacket(player, packet);
+					            	}
+					            	catch (Exception e) {
+					            		e.printStackTrace();
+					            	}
+					            	}
+					            	else {
+					            		isf.sendSignChange(player,sign);
+					            	}
 								}
 					            else if (dist > (Bukkit.getViewDistance()*24)*(Bukkit.getViewDistance()*24)) {
 //					            	System.out.println("too far");
@@ -1808,8 +1935,9 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 					islagging = false;
 				}
 			if (counter2 > 1200) {
+				try {
 				counter2 = 0;
-				System.out.println("&9[&bISE&9] &fSAVING VARIABLES!");
+				System.out.println("&9[&bISP&9] &fSAVING VARIABLES!");
 				getConfig().getConfigurationSection("scripting").set("variables", null);
 		        for (final Entry<String, Object> node : globals.entrySet()) {
 		        	getConfig().options().copyDefaults(true);
@@ -1818,12 +1946,40 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 		        	saveConfig();
 		        }
 		        System.out.println("DONE!");
+				}
+				catch (Exception e) {
+					
+				}
 			}
 		}
 	}
 		
 	};
-
+	
+	@EventHandler
+    public void onPlayerInteract(PlayerInteractEvent event)
+    {
+		if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+			Block block = event.getClickedBlock();
+	        if ((block.getType() == Material.SIGN_POST) || (block.getType() == Material.WALL_SIGN)) {
+	        	if (isf==null) {
+	            	PacketContainer packet = protocolmanager.createPacket(PacketType.Play.Server.UPDATE_SIGN);
+	            	try {
+	            		Sign sign = (Sign)block.getState();
+	                    Player player = event.getPlayer();
+	            		packet.getSpecificModifier(Integer.TYPE).write(0, Integer.valueOf(sign.getX()));
+	            		packet.getSpecificModifier(Integer.TYPE).write(1, Integer.valueOf(sign.getY()));
+	            		packet.getSpecificModifier(Integer.TYPE).write(2, Integer.valueOf(sign.getZ()));
+	            		packet.getStringArrays().write(0, sign.getLines());
+	            		protocolmanager.sendServerPacket(player, packet);
+	            	}
+	            	catch (Exception e) {
+	            		e.printStackTrace();
+	            	}
+	            	}
+	        }
+		}
+    }
     
 
 	
