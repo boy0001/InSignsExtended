@@ -40,9 +40,14 @@ public class ExperienceManager {
 	 * @throws IllegalArgumentException if the player is null
 	 */
 	public ExperienceManager(Player player) {
-		Validate.notNull(player, "Player cannot be null");
+		if (player!=null) {
 		this.player = new WeakReference<Player>(player);
 		this.playerName = player.getName();
+		}
+		else {
+			this.player = null;
+			this.playerName = "";
+		}
 	}
 
 	/**
