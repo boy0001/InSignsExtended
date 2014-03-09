@@ -82,18 +82,25 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 				return player.getLocation();
 			}
 			else {
-				ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(string);
-				if (offlineplayer.exists()) {
-					return offlineplayer.getLocation();
+				try {
+					ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(string);
+					if (offlineplayer.exists()) {
+						return offlineplayer.getLocation();
+					}
+					else {
+						World world = Bukkit.getWorld(string);
+						if (world!=null) {
+							return world.getSpawnLocation();
+						}
+					}
 				}
-				else {
+				catch (Exception e) {
 					World world = Bukkit.getWorld(string);
 					if (world!=null) {
 						return world.getSpawnLocation();
 					}
 				}
 			}
-			
 		}
 		else {
 			String[] mysplit = string.split(",");
