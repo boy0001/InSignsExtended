@@ -1,6 +1,7 @@
 package com.empcraft;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -63,8 +64,8 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     public static int counter2 = 0;
     public static Map<String, Object> globals = new HashMap<String, Object>();
     public int recursion = 0;
-	public static List<Location> list = new ArrayList<>();
-	public static List<String> players = new ArrayList<>();
+	public static List<Location> list = new ArrayList();
+	public static List<String> players = new ArrayList();
 	public long timerstart = 0;
 	public boolean islagging = false;
 	public int timerlast = 0;
@@ -396,10 +397,13 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     		return mysplit[1].replace(mysplit[2],",");
     	}
     	else if (line.contains("{hasperm:")) {
-    		if (elevation==true) {
+    		if (user==null) {
     			return "true";
     		}
-    		if (checkperm(user,mysplit[1])) {
+    		else if (mysplit.length==3) {
+    			return ""+perms.playerHas(user.getWorld(),mysplit[1], mysplit[2]);
+    		}
+    		else if (checkperm(user,mysplit[1])) {
     			return "true";
     		}
     		return "false";
@@ -647,6 +651,19 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
       			mylist+=clist.getName()+",";
       		}
     		return mylist.substring(0,mylist.length()-1);
+    	}
+    	else if (line.equals("{playerlist}")) {
+    			List<String> names = new ArrayList<String>();
+                File playersFolder = new File("world" + File.separator + "players");
+                String[] dat = playersFolder.list(new FilenameFilter() {
+                    public boolean accept(File f, String s) {
+                        return s.endsWith(".dat");
+                    }
+                });
+                for (String current : dat) {
+                    names.add(current.replaceAll(".dat$", ""));
+                }
+                return StringUtils.join(names,",");
     	}
     	else if (line.equals("{baniplist}")) {
     		String mylist = "";
@@ -907,7 +924,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     		for (String mycustom:custom) {
     			
     			if (line.contains("{"+mycustom+":")||line.equals("{"+mycustom+"}")) {
-	    			List<String> current = myconfig.getStringList("signs.placeholders."+mycustom);
+	    			List<String> current = myconfig.getStringList("scripting.placeholders."+mycustom);
 	    			String mycommands = StringUtils.join(current,";");
 	    			for(int i = 0; i < mysplit.length; i++) {
 	    				mycommands.replace("{arg"+i+"}", mysplit[i]);
@@ -1044,7 +1061,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
         	}
         	catch (Exception f) {
             	try {
-            		int num = (int) toreturn;
+            		Integer num = (Integer) toreturn;
             		line = Integer.toString(num);
             	}
             	catch (Exception g) {
@@ -1173,7 +1190,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     				        		FileConfiguration current = YamlConfiguration.loadConfiguration(mysigns[i]);
     				        		Set<String> values = current.getConfigurationSection("").getKeys(false);
     								for(String myval:values) {
-    				        			getConfig().set("signs.placeholders."+mysigns[i].getName().substring(0,mysigns[i].getName().length()-4), current.get(myval));
+    				        			getConfig().set("scripting.placeholders."+mysigns[i].getName().substring(0,mysigns[i].getName().length()-4), current.get(myval));
     				        		}
     			        		}
     			        	}
@@ -1676,7 +1693,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 	        		FileConfiguration current = YamlConfiguration.loadConfiguration(mysigns[i]);
 	        		Set<String> values = current.getConfigurationSection("").getKeys(false);
 					for(String myval:values) {
-	        			getConfig().set("signs.placeholders."+mysigns[i].getName().substring(0,mysigns[i].getName().length()-4), current.get(myval));
+	        			getConfig().set("scripting.placeholders."+mysigns[i].getName().substring(0,mysigns[i].getName().length()-4), current.get(myval));
 	        		}
         		}
         	}
@@ -1789,7 +1806,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
         List<String> whitelist = Arrays.asList("display","money","prefix","suffix","group","x","y","z","lvl","exhaustion","health","exp","hunger","air","maxhealth","maxair","gamemode","direction","biome","itemname","itemid","itemamount","durability","dead","sleeping","whitelisted","operator","sneaking","itempickup","flying","blocking","age","bed","compass","spawn","worldticks","time","time12","epoch","epochmilli","epochnano","online","worlds","banlist","baniplist","operators","whitelist","randchoice","rand","elevated","matchgroup","matchplayer","hasperm","js","config");
         options.put("signs.autoupdate.whitelist",whitelist);
         List<String> example = Arrays.asList("return &4Hello!");
-        options.put("signs.placeholders.example",example);
+        options.put("scripting.placeholders.example",example);
         for (final Entry<String, Object> node : options.entrySet()) {
         	 if (!getConfig().contains(node.getKey())) {
         		 getConfig().set(node.getKey(), node.getValue());
