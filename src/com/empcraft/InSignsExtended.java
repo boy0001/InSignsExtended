@@ -67,6 +67,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     public int recursion = 0;
 	public static List<Location> list = new ArrayList();
 	public static List<String> players = new ArrayList();
+	public static List<Integer> clicks = new ArrayList();
 	public long timerstart = 0;
 	public boolean islagging = false;
 	public int timerlast = 0;
@@ -120,12 +121,12 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 		}
 		return null;
 	}
-    public String fphs(String line, Player user, Player sender, Boolean elevation) {
+    public String fphs(String line, Player user, Player sender, Boolean elevation,Location interact) {
     	String[] mysplit = line.substring(1,line.length()-1).split(":");
     	if (mysplit.length==2) {
     		if ((Bukkit.getPlayer(mysplit[1])!=null)) {
-        		user = Bukkit.getPlayer(mysplit[1]);
-        		line = "{"+mysplit[0]+"}";
+				user = Bukkit.getPlayer(mysplit[1]);
+				line = StringUtils.join(mysplit,":").replace(":"+mysplit[1],"");
         	}
     	}
     	if (line.contains("{setgroup:")) {
@@ -289,6 +290,9 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     	else if (line.contains("{rand:")) {
     		Random random = new Random();
     		return (""+random.nextInt(Integer.parseInt(mysplit[1])));
+    	}
+    	else if (line.contains("{msg:")) {
+    		return getmsg(mysplit[1]);
     	}
     	else if (line.contains("{range:")) {
     		String mylist = "";
@@ -885,148 +889,144 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 		}
     	//TODO
     	else if (user != null) {
+    		String line2 = line;
     		if (line.contains(":")) {
-    			line = line.split(":")[0]+"}";
+    			line2 = line.split(":")[0]+"}";
     		}
-    		if (line.equals("{player}")) {
+    		if (line2.equals("{player}")) {
     			return ""+user.getName();
     		}
-    		else if (line.equals("{sneaking}")) {
+    		else if (line2.equals("{sneaking}")) {
     			return ""+user.isSneaking();
     		}
-    		if (line.equals("{itempickup}")) {
+    		if (line2.equals("{itempickup}")) {
 	          return ""+user.getCanPickupItems();
 	        }
-    		else if (line.equals("{flying}")) {
+    		else if (line2.equals("{flying}")) {
     			return ""+user.getAllowFlight();
     		}
-    		else if (line.equals("{blocking}")) {
+    		else if (line2.equals("{blocking}")) {
     			return ""+user.isBlocking();
     		}
-    		else if (line.equals("{exhaustion}")) {
+    		else if (line2.equals("{exhaustion}")) {
     			return ""+user.getExhaustion();
     		}
-    		else if (line.equals("{firstjoin}")) {
+    		else if (line2.equals("{firstjoin}")) {
     			return ""+Long.toString(user.getFirstPlayed()/1000);
     		}
-    		else if (line.equals("{hunger}")) {
+    		else if (line2.equals("{hunger}")) {
     			return ""+user.getFoodLevel();
     		}
-    		else if (line.equals("{grounded}")) {
+    		else if (line2.equals("{grounded}")) {
     			return ""+user.isOnGround();
     		}
-    		else if (line.equals("{passenger}")) {
+    		else if (line2.equals("{passenger}")) {
     			if (user.getVehicle()==null) {
     				return "false";
     			}
     			return ""+user.getVehicle().toString();
     		}
-    		else if (line.equals("{maxhealth}")) {
+    		else if (line2.equals("{maxhealth}")) {
     			return ""+user.getMaxHealth();
     		}
-    		else if (line.equals("{maxair}")) {
+    		else if (line2.equals("{maxair}")) {
     			return ""+user.getMaximumAir();
     		}
-    		else if (line.equals("{air}")) {
+    		else if (line2.equals("{air}")) {
     			return ""+(user.getRemainingAir()/20);
     		}
-    		else if (line.equals("{age}")) {
+    		else if (line2.equals("{age}")) {
     			return ""+(user.getTicksLived()/20);
     		}
-    		else if (line.equals("{bed}")) {
+    		else if (line2.equals("{bed}")) {
     			return ""+user.getBedSpawnLocation().getX()+","+user.getBedSpawnLocation().getY()+","+user.getBedSpawnLocation().getZ();
     		}
-    		else if (line.equals("{compass}")) {
+    		else if (line2.equals("{compass}")) {
     			return ""+user.getCompassTarget().getX()+","+user.getCompassTarget().getY()+","+user.getCompassTarget().getZ();
     		}
-    		else if (line.equals("{storm}")) {
+    		else if (line2.equals("{storm}")) {
     			if (user.getWorld().hasStorm()) {
     				return "true";
     			}
     			return "false";
     		}
-    		else if (line.equals("{thunder}")) {
+    		else if (line2.equals("{thunder}")) {
     			if (user.getWorld().isThundering()) {
     				return "true";
     			}
     			return "false";
     		}
 
-    		else if (line.equals("{dead}")) {
+    		else if (line2.equals("{dead}")) {
     			return ""+user.isDead();
     		}
-    		else if (line.equals("{sleeping}")) {
+    		else if (line2.equals("{sleeping}")) {
     			return ""+user.isSleeping();
     		}
-    		else if (line.equals("{whitelisted}")) {
+    		else if (line2.equals("{whitelisted}")) {
     			return ""+user.isWhitelisted();
     		}
-    		else if (line.equals("{world}")) {
+    		else if (line2.equals("{world}")) {
     			return user.getWorld().getName();
     		}
-        	else if (line.contains("{world:")) {
+        	else if (line2.contains("{world:")) {
         		return Bukkit.getWorld(mysplit[1]).getName();
         	}
-        	else if (line.equals("{x}")) {
+        	else if (line2.equals("{x}")) {
     			return String.valueOf(Math.round(user.getLocation().getX()));
     		}
-    		else if (line.equals("{y}")) {
+    		else if (line2.equals("{y}")) {
     			return String.valueOf(Math.round(user.getLocation().getY()));
     		}
-    		else if (line.equals("{z}")) {
+    		else if (line2.equals("{z}")) {
     			return String.valueOf(Math.round(user.getLocation().getZ()));
     		}
 
-    		else if (line.equals("{lvl}")) {
+    		else if (line2.equals("{lvl}")) {
     			ExperienceManager expMan = new ExperienceManager(user);
     			return ""+expMan.getLevelForExp(expMan.getCurrentExp());
     		}
-    		else if (line.equals("{exp}")) {
+    		else if (line2.equals("{exp}")) {
     			ExperienceManager expMan = new ExperienceManager(user);
     			return ""+expMan.getCurrentExp();
     		}
-    		else if (line.equals("{money}")) {
+    		else if (line2.equals("{money}")) {
     			return ""+econ.getBalance(user.getName());
     		}
-    		else if (line.equals("{prefix}")) {
+    		else if (line2.equals("{prefix}")) {
     			return ""+chat.getPlayerPrefix(user);
     		}
-    		else if (line.equals("{suffix}")) {
+    		else if (line2.equals("{suffix}")) {
     			return ""+chat.getPlayerSuffix(user);
     		}
-    		else if (line.equals("{group}")) {
+    		else if (line2.equals("{group}")) {
     			return ""+perms.getPrimaryGroup(user);
     		}
-    		else if (line.equals("{operator}")) {
-    			if (user==null) {
-    				return "true";
-    			}
-    			else {
-    				return ""+user.isOp();
-    			}
+    		else if (line2.equals("{operator}")) {
+				return ""+user.isOp();
     		}
-    		else if (line.equals("{worldtype}")) {
+    		else if (line2.equals("{worldtype}")) {
     			return ""+user.getWorld().getWorldType();
     		}
-    		else if (line.equals("{itemid}")) {
+    		else if (line2.equals("{itemid}")) {
     			return String.valueOf(user.getInventory().getItemInHand().getTypeId());
     		}
-    		else if (line.equals("{itemamount}")) {
+    		else if (line2.equals("{itemamount}")) {
     			return String.valueOf(user.getInventory().getItemInHand().getAmount());
     		}
-    		else if (line.equals("{itemname}")) {
+    		else if (line2.equals("{itemname}")) {
     			return String.valueOf(user.getInventory().getItemInHand().getType());
     		}
-    		else if (line.equals("{durability}")) {
+    		else if (line2.equals("{durability}")) {
     			return String.valueOf(user.getInventory().getItemInHand().getDurability());
     		}
-    		else if (line.equals("{ip}")) {
+    		else if (line2.equals("{ip}")) {
     			return user.getAddress().getAddress().toString().split("/")[(user.getAddress().toString().split("/").length)-1].split(":")[0];
     		}
-    		else if (line.equals("{display}")) {
+    		else if (line2.equals("{display}")) {
     			return ""+user.getDisplayName();
     		}
-    		else if (line.equals("{gamemode}")) {
+    		else if (line2.equals("{gamemode}")) {
     			if(user.getGameMode() == GameMode.CREATIVE){
     	        	return "CREATIVE";
     	        }
@@ -1037,7 +1037,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     	        	return "ADVENTURE";
     	        }
     		}
-    		else if (line.equals("{direction}")) {
+    		else if (line2.equals("{direction}")) {
     	        	String tempstr = "null";
     	            int degrees = (Math.round(user.getLocation().getYaw()) + 270) % 360;
     	            if (degrees <= 22)  {tempstr="WEST";}
@@ -1051,12 +1051,41 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     	            else if (degrees <= 359) {tempstr="WEST";}
     	            return tempstr;
     		}
-    		else if (line.equals("{biome}")) {
+    		else if (line2.equals("{biome}")) {
     			return user.getWorld().getBiome(user.getLocation().getBlockX(), user.getLocation().getBlockZ()).toString();
     		}
-    		else if (line.equals("{health}")) {
+    		else if (line2.equals("{health}")) {
     			return String.valueOf(user.getHealth());
     		}
+    	}
+    	if (interact!=null) {
+    		try {
+	    		if (line.equals("{uses}")) {
+	    			for (int i = 0;i<list.size();i++) {
+		        		if (list.get(i).equals(interact)) {
+		        			return ""+clicks.get(i);
+		        		}
+		        	}
+	    		}
+	    		else if (line.contains("{uses:")) {
+	    			int maxclicks = Integer.parseInt(mysplit[1]);
+	    			for (int i = 0;i<list.size();i++) {
+		        		if (list.get(i).equals(interact)) {
+		        			int myclicks = clicks.get(i);
+		        			if (myclicks > maxclicks) {
+		        				return ""+(myclicks%maxclicks);
+		        			}
+		        			else {
+		        				return ""+myclicks;
+		        			}
+		        		}
+		        	}
+	    		}
+    		}
+    		 catch (Exception e) {
+    		 }
+    	}
+    	else {
     	}
     	
     	for (Entry<String, Object> node : globals.entrySet()) {
@@ -1066,7 +1095,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
         }
     	Set<String> custom = null;
     	FileConfiguration myconfig = getConfig();
-		custom = myconfig.getConfigurationSection("signs.placeholders").getKeys(false);
+		custom = myconfig.getConfigurationSection("scripting.placeholders").getKeys(false);
     	if (custom.size()>0) {
     		for (String mycustom:custom) {
     			
@@ -1077,7 +1106,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 	    				mycommands.replace("{arg"+i+"}", mysplit[i]);
 	    			}
 	    			try {
-	    				String result = execute(mycommands,user,sender,elevation);
+	    				String result = execute(mycommands,user,sender,elevation,interact);
 	    				if (result.substring(0,3).equals("if ")) {
 	    					return ""+testif(result);
 	    				}
@@ -1093,7 +1122,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     	return "null";
     	
     }
-    public String evaluate(String line, Player user, Player sender, Boolean elevation) {
+    public String evaluate(String line, Player user, Player sender, Boolean elevation,Location interact) {
         String[] args = line.split(" "); 
         for(int i = 0; i < args.length; i++) {
         	if (line.contains("{arg"+(i+1)+"}")){
@@ -1124,7 +1153,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
        				boolean replaced = false;
        				if (replaced==false) {
        					try {
-       						line = line.replace(toreplace, fphs(toreplace,user,sender,elevation));
+       						line = line.replace(toreplace, fphs(toreplace,user,sender,elevation,interact));
        					}
        					catch (Exception e) {
        						line = line.replace(toreplace, "null");
@@ -1504,6 +1533,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 		if (list.contains(loc)==false) {
 		players.add(player.getName());
 		list.add(loc);
+		clicks.add(0);
 		}
 	}
 	public void onDisable() {
@@ -1533,7 +1563,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 				
 			}
     }
-    public String execute(String line, Player user, Player sender, Boolean elevation) {
+    public String execute(String line, Player user, Player sender, Boolean elevation,Location interact) {
     	recursion++;
     	try {
     	final Map<String, Object> locals = new HashMap<String, Object>();
@@ -1546,7 +1576,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 		String myvar = ",null";
 		for(int i = 0; i < mycmds.length; i++) {
 			if (i>=i2) {
-			String mycommand = evaluate(mycmds[i],user,sender,elevation);
+			String mycommand = evaluate(mycmds[i],user,sender,elevation,interact);
             for (final Entry<String, Object> node : locals.entrySet()) {
               	 if (mycommand.contains(node.getKey())) {
               		 mycommand = mycommand.replace(node.getKey(), (CharSequence) node.getValue());
@@ -1609,7 +1639,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
             						globals.put("{"+cmdargs[1].split(":")[0]+"}", cmdargs[1].split(":")[1].split(",")[k]);
             					}
             					if (recursion<1024) {
-            						execute(mytest,user,sender,elevation);
+            						execute(mytest,user,sender,elevation,interact);
             					}
             				}
             				if (mode == 1) {
@@ -1678,7 +1708,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
             	  if (cmdargs.length>1) {
             	  if (cmdargs.length>2) {
             	  try {
-            	  globals.put("{"+evaluate(cmdargs[1],user,sender,elevation)+"}", evaluate(StringUtils.join(Arrays.copyOfRange(cmdargs, 2, cmdargs.length)," "),user,sender,elevation));
+            	  globals.put("{"+evaluate(cmdargs[1],user,sender,elevation,interact)+"}", evaluate(StringUtils.join(Arrays.copyOfRange(cmdargs, 2, cmdargs.length)," "),user,sender,elevation,interact));
             	  if (user != null) {
             	  }
             	  }
@@ -1705,7 +1735,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
             	  if (cmdargs.length>2) {
             	  try {
             		  
-            	  locals.put("{"+evaluate(cmdargs[1],user,sender,elevation)+"}", evaluate(StringUtils.join(Arrays.copyOfRange(cmdargs, 2, cmdargs.length)," "),user,sender,elevation));
+            	  locals.put("{"+evaluate(cmdargs[1],user,sender,elevation,interact)+"}", evaluate(StringUtils.join(Arrays.copyOfRange(cmdargs, 2, cmdargs.length)," "),user,sender,elevation,interact));
             	  if (user != null) {
             	  }
             	  }
@@ -1773,7 +1803,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 				 return mycommand.substring(7,mycommand.length());
 			 }
 			else {
-				msg(user,colorise(evaluate(mycommand, user,sender,elevation)));
+				msg(user,colorise(evaluate(mycommand, user,sender,elevation,interact)));
 			}
               }
 			else {
@@ -1782,7 +1812,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 					getServer().dispatchCommand(getServer().getConsoleSender(), mycommand);
 				}
 				else {
-					System.out.println(evaluate(mycommand, user,sender,elevation));
+					System.out.println(evaluate(mycommand, user,sender,elevation,interact));
 				}
 			}
 			
@@ -1867,28 +1897,28 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 //	            	System.out.println(1+" "+StringUtils.join(lines));
 					boolean modified = false;
 					if (lines[0].equals("")==false) {
-						String result = evaluate(lines[0],player,player, false);
+						String result = evaluate(lines[0],player,player, false,loc);
 						if (result.equals(lines[0])==false) {
 							lines[0] = colorise(result);
 							modified = true;
 						}
 					}
 					if (lines[1].equals("")==false) {
-						String result = evaluate(lines[1],player,player, false);
+						String result = evaluate(lines[1],player,player, false,loc);
 						if (result.equals(lines[1])==false) {
 							lines[1] = colorise(result);
 							modified = true;
 						}
 					}
 					if (lines[2].equals("")==false) {
-						String result = evaluate(lines[2],player,player, false);
+						String result = evaluate(lines[2],player,player, false,loc);
 						if (result.equals(lines[2])==false) {
 							lines[2] = colorise(result);
 							modified = true;
 						}
 					}
 					if (lines[3].equals("")==false) {
-						String result = evaluate(lines[3],player,player, false);
+						String result = evaluate(lines[3],player,player, false,loc);
 						if (result.equals(lines[3])==false) {
 							lines[3] = colorise(result);
 							modified = true;
@@ -1898,7 +1928,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 //						System.out.println(2+" "+unmodified);
 						for (int i = 0; i < 4; i++) {
 		            		if (lines[i].length()>15) {
-			            		if ((i < 4)) {
+			            		if ((i < 3)) {
 			            			if (lines[i+1].isEmpty()) {
 			            				lines[i+1] = lines[i].substring(15);
 			            			}
@@ -1922,10 +1952,10 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 					}
 	            }
 	            else {
-	            	lines[0] = colorise(evaluate(lines[0],player,player, false));
-	            	lines[1] = colorise(evaluate(lines[1],player,player, false));
-	            	lines[2] = colorise(evaluate(lines[2],player,player, false));
-	            	lines[3] = colorise(evaluate(lines[3],player,player, false));
+	            	lines[0] = colorise(evaluate(lines[0],player,player, false,loc));
+	            	lines[1] = colorise(evaluate(lines[1],player,player, false,loc));
+	            	lines[2] = colorise(evaluate(lines[2],player,player, false,loc));
+	            	lines[3] = colorise(evaluate(lines[3],player,player, false,loc));
 	            	for (int i = 0; i < 4; i++) {
 	            		if (lines[i].length()>15) {
 		            		if ((i < 4)) {
@@ -1945,12 +1975,13 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
         }
         getConfig().options().copyDefaults(true);
         final Map<String, Object> options = new HashMap<String, Object>();
-        getConfig().set("version", "0.5.0");
+        getConfig().set("version", "0.6.0");
+        options.put("language","english");
         options.put("signs.autoupdate.enabled",true);
         options.put("signs.autoupdate.buffer",1000);
         options.put("signs.autoupdate.updates-per-milli",1);
         options.put("signs.autoupdate.interval",1);
-        List<String> whitelist = Arrays.asList("display","money","prefix","suffix","group","x","y","z","lvl","exhaustion","health","exp","hunger","air","maxhealth","maxair","gamemode","direction","biome","itemname","itemid","itemamount","durability","dead","sleeping","whitelisted","operator","sneaking","itempickup","flying","blocking","age","bed","compass","spawn","worldticks","time","time12","epoch","epochmilli","epochnano","online","worlds","banlist","baniplist","operators","whitelist","randchoice","rand","elevated","matchgroup","matchplayer","hasperm","js","config","passenger","lastplayed");
+        List<String> whitelist = Arrays.asList("display","uses","money","prefix","suffix","group","x","y","z","lvl","exhaustion","health","exp","hunger","air","maxhealth","maxair","gamemode","direction","biome","itemname","itemid","itemamount","durability","dead","sleeping","whitelisted","operator","sneaking","itempickup","flying","blocking","age","bed","compass","spawn","worldticks","time","time12","epoch","epochmilli","epochnano","online","worlds","banlist","baniplist","operators","whitelist","randchoice","rand","elevated","matchgroup","matchplayer","hasperm","js","config","passenger","lastplayed");
         options.put("signs.autoupdate.whitelist",whitelist);
         List<String> example = Arrays.asList("return &4Hello!");
         options.put("scripting.placeholders.example",example);
@@ -2024,37 +2055,43 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 								}
 					            else if (dist > (Bukkit.getViewDistance()*24)*(Bukkit.getViewDistance()*24)) {
 //					            	System.out.println("too far");
-									list.remove(timerlast);
+					            	list.remove(timerlast);
+					            	clicks.remove(timerlast);
 									players.remove(timerlast);
 					            }
 								}
 								else {
 //									System.out.println("sign=null");
-									list.remove(timerlast);
+					            	list.remove(timerlast);
+					            	clicks.remove(timerlast);
 									players.remove(timerlast);
 								}
 							}
 							else {
 //								System.out.println("unloaded chunk");
-								list.remove(timerlast);
+				            	list.remove(timerlast);
+				            	clicks.remove(timerlast);
 								players.remove(timerlast);
 							}
 						}
 						else {
 //							System.out.println("wrong map");
-							list.remove(timerlast);
+			            	list.remove(timerlast);
+			            	clicks.remove(timerlast);
 							players.remove(timerlast);
 							}
 						}
 						else {
 //							System.out.println("p=null");
-							list.remove(timerlast);
+			            	list.remove(timerlast);
+			            	clicks.remove(timerlast);
 							players.remove(timerlast);
 						}
 					}
 					catch (Exception e) {
 //						System.out.println("1 "+e);
-						list.remove(timerlast);
+		            	list.remove(timerlast);
+		            	clicks.remove(timerlast);
 						players.remove(timerlast);
 //						System.out.println("ERROR "+e);
 //						System.out.println("2");
@@ -2086,6 +2123,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 //						System.out.println("1");
 						list = list.subList(10,list.size());
 						players = players.subList(10,players.size());
+						clicks = clicks.subList(10,clicks.size());
 //						System.out.println("2");
 					}
 				}
@@ -2094,6 +2132,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 //						System.out.println("1");
 						list = list.subList(10,list.size());
 						players = players.subList(10,players.size());
+						clicks = clicks.subList(10,clicks.size());
 //						System.out.println("2");
 					}
 					islagging = false;
@@ -2126,6 +2165,12 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 		if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
 			Block block = event.getClickedBlock();
 	        if ((block.getType() == Material.SIGN_POST) || (block.getType() == Material.WALL_SIGN)) {
+	        	for (int i = 0;i<list.size();i++) {
+	        		if (list.get(i).equals(block.getLocation())) {
+	        			clicks.set(i, clicks.get(i)+1);
+	        		}
+	        	}
+	        	
 	        	if (isf==null) {
 	            	PacketContainer packet = protocolmanager.createPacket(PacketType.Play.Server.UPDATE_SIGN);
 	            	try {
