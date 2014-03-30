@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -73,8 +75,10 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 	public int timerlast = 0;
 	private static ProtocolManager protocolmanager;
 	InSignsExtended plugin;
-	InSignsFeature isf;
+	public Object isf;
+	
 	public ScriptEngine engine = (new ScriptEngineManager()).getEngineByName("JavaScript");
+	
 	
 	public Location getloc(String string,Player user) {
 		if (string.contains(",")==false) {
@@ -96,9 +100,23 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 					}
 				}
 				catch (Exception e) {
-					World world = Bukkit.getWorld(string);
-					if (world!=null) {
-						return world.getSpawnLocation();
+					try {
+						IOP_1_7_2 offlineplayer = new IOP_1_7_2(string);
+						if (offlineplayer.exists()) {
+							return offlineplayer.getLocation();
+						}
+						else {
+							World world = Bukkit.getWorld(string);
+							if (world!=null) {
+								return world.getSpawnLocation();
+							}
+						}
+					}
+					catch (Exception e2) {
+						World world = Bukkit.getWorld(string);
+						if (world!=null) {
+							return world.getSpawnLocation();
+						}
 					}
 				}
 			}
@@ -167,7 +185,6 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     				}
     			}
     			catch (Exception e) {
-    				System.out.println(e);
     			}
     		}
     	}
@@ -195,7 +212,6 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     				perms.playerRemoveGroup(Bukkit.getWorld(mysplit[3]),mysplit[1], mysplit[2]);
     			}
     			catch (Exception e) {
-    				System.out.println(e);
     			}
     		}
     	}
@@ -223,7 +239,6 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     				perms.playerRemove(Bukkit.getWorld(mysplit[3]),mysplit[1], mysplit[2]);
     			}
     			catch (Exception e) {
-    				System.out.println(e);
     			}
     		}
     	}
@@ -281,7 +296,6 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     				chat.setPlayerSuffix(Bukkit.getWorld(mysplit[3]),mysplit[1], mysplit[2]);
     			}
     			catch (Exception e) {
-    				System.out.println(e);
     			}
     		}
     	}
@@ -398,6 +412,9 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     		if (mysplit[1].contains(mysplit[2])) {
     			return "true";
     		}
+    		else if (mysplit[1].equals(mysplit[2])) {
+    			return "true";
+    		}
     		return "false";
     	}
     	else if (line.contains("{substring:")) {
@@ -457,8 +474,9 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     	}
     	else if (line.contains("{time}")) {
     		Double time = user.getWorld().getTime() / 1000.0;
-    		if (time>24) { time-=24; }
-    		String hr = ""+time.intValue() + 6;
+    		Double time2 = time;
+    		if (time2>18) { time2-=25; }
+    		String hr = ""+(time2.intValue() + 6);
     		String min = ""+((int) (60*(time%1)));
     		if (min.length()==1) {
     			min = "0"+min;
@@ -468,11 +486,104 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     		}
     		return ""+hr+":"+min;
     	}
+    	else if (line.contains("{sectotime:")) {
+    		String toreturn = "";
+    		try {
+    		Long time = Long.parseLong(mysplit[1]);
+    		int years = 0;
+    		int weeks = 0;
+    		int days = 0;
+    		int hours = 0;
+    		int minutes = 0;
+    		int seconds = 0;
+    		if (time>=33868800) {
+    			years = (int) (time/33868800);
+    			time-=years*33868800;
+    			toreturn+=years+"y ";
+    		}
+    		if (time>=604800) {
+    			weeks = (int) (time/604800);
+    			time-=weeks*604800;
+    			toreturn+=weeks+"w ";
+    		}
+    		if (time>=86400) {
+    			days = (int) (time/86400);
+    			time-=days*86400;
+    			toreturn+=days+"d ";
+    		}
+    		if (time>=3600) {
+    			hours = (int) (time/3600);
+    			time-=hours*3600;
+    			toreturn+=hours+"h ";
+    		}
+    		if (time>=60) {
+    			minutes = (int) (time/60);
+    			time-=minutes*60;
+    			toreturn+=minutes+"m ";
+    		}
+    		if (toreturn.equals("")||time>0){
+    			toreturn+=(time)+"s ";
+    		}
+    		toreturn = toreturn.trim();
+    		}
+    		catch (Exception e) {
+    			e.printStackTrace();
+    		}
+    		return toreturn;
+    	}
+    	else if (line.contains("{localtime}")) {
+    		Date time = Calendar.getInstance().getTime();
+    		String hours = ""+time.getHours();
+    		String minutes = ""+time.getMinutes();
+    		String seconds = ""+time.getSeconds();
+    		if (hours.length()==1) {
+    			hours = "0"+hours;
+    		}
+    		if (minutes.length()==1) {
+    			minutes = "0"+minutes;
+    		}
+    		if (seconds.length()==1) {
+    			seconds = "0"+seconds;
+    		}
+    		return hours+":"+minutes+":"+seconds;
+    	}
+    	else if (line.contains("{localtime12}")) {
+    		String ampm = " AM";
+    		Date time = Calendar.getInstance().getTime();
+    		int hours = time.getHours();
+    		String minutes = ""+time.getMinutes();
+    		String seconds = ""+time.getSeconds();
+    		
+    		if (hours>12) {
+    			hours-=12;
+    			ampm = " PM";
+    		}
+    		else if(hours==12) {
+    			ampm = " PM";
+    		}
+    		else if (hours==0) {
+    			hours+=12;
+    		}
+    		
+    		if (minutes.length()==1) {
+    			minutes = "0"+minutes;
+    		}
+    		if (seconds.length()==1) {
+    			seconds = "0"+seconds;
+    		}
+    		
+    		String hr = ""+hours;
+    		if (hr.length()==1) {
+    			hr = "0"+hr;
+    		}
+    		return hr+":"+minutes+":"+seconds+ampm;
+    	}
     	else if (line.contains("{time:")) {
     		Location loc = getloc(mysplit[1], user);
     		Double time = loc.getWorld().getTime() / 1000.0;
-    		if (time>24) { time-=24; }
-    		String hr = ""+time.intValue() + 6;
+    		Double time2 = time;
+    		if (time2>18) { time2-=25; }
+    		String hr = ""+(time2.intValue() + 6);
     		String min = ""+((int) (60*(time%1)));
     		if (min.length()==1) {
     			min = "0"+min;
@@ -485,15 +596,26 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     	else if (line.contains("{time12}")) {
     		String ampm = " AM";
     		Double time = user.getWorld().getTime() / 1000.0;
-    		if (time>24) { time-=24; }
-    		if (time+6>12) {
-    			time-=12;
+    		Double time2 = time;
+    		if (time2>18) { time2-=24; }
+    		time2+=6;
+    		if (time2.intValue()>13) {
+    			time2-=12;
     			ampm = " PM";
     		}
-    		String hr = ""+time.intValue() + 6;
+    		else if(time2>12) {
+    			ampm = " PM";
+    		}
+    		else if (time2 < 1) {
+    			time2+=12;
+    		}
+    		String hr = ""+(time2.intValue());
     		String min = ""+((int) (60*(time%1)));
     		if (min.length()==1) {
     			min = "0"+min;
+    		}
+    		if (hr.length()==1) {
+    			hr = "0"+hr;
     		}
     		return ""+hr+":"+min+ampm;
     	}
@@ -501,15 +623,26 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     		String ampm = " AM";
     		Location loc = getloc(mysplit[1], user);
     		Double time = loc.getWorld().getTime() / 1000.0;
-    		if (time>24) { time-=24; }
-    		if (time+6>12) {
+    		Double time2 = time;
+    		if (time2>18) { time2-=24; }
+    		time2+=6;
+    		if (time2.intValue()>13) {
+    			time2-=12;
     			ampm = " PM";
-    			time-=12;
     		}
-    		String hr = ""+time.intValue() + 6;
+    		else if(time2>12) {
+    			ampm = " PM";
+    		}
+    		else if (time2 < 1) {
+    			time2+=12;
+    		}
+    		String hr = ""+(time2.intValue());
     		String min = ""+((int) (60*(time%1)));
     		if (min.length()==1) {
     			min = "0"+min;
+    		}
+    		if (hr.length()==1) {
+    			hr = "0"+hr;
     		}
     		return ""+hr+":"+min+ampm;
     	}
@@ -744,9 +877,27 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     		}
     		return mystr;
     	}
-		else if (line.contains("{exhaustion:")) {
+    	else if (line.contains("{exhaustion:")) {
+    		try {
 			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
 			return ""+offlineplayer.getExhaustion();
+    		}
+    		catch (Exception e) {
+    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(mysplit[1]);
+    			return ""+offlineplayer.getExhaustion();
+    		}
+		}
+    	else if (line.contains("{display:")) {
+    		try {
+    			String nick = (new EssentialsFeature()).displayName(mysplit[1]);
+    			if (nick.equals("")) {
+    				return mysplit[1];
+    			}
+    			return nick;
+    		}
+    		catch (Exception e) {
+    			return mysplit[1];
+    		}
 		}
 		else if (line.contains("{firstjoin:")) {
 			return Long.toString(Bukkit.getOfflinePlayer(mysplit[1]).getFirstPlayed()/1000);		
@@ -755,25 +906,56 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 			return Long.toString(Bukkit.getOfflinePlayer(mysplit[1]).getLastPlayed()/1000);		
 		}
 		else if (line.contains("{hunger:")) {
+    		try {
 			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
 			return ""+offlineplayer.getFoodLevel();
+    		}
+    		catch (Exception e) {
+    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(mysplit[1]);
+    			return ""+offlineplayer.getFoodLevel();
+    		}
 		}
 		else if (line.contains("{air:")) {
+    		try {
 			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
 			return ""+offlineplayer.getRemainingAir();
+    		}
+    		catch (Exception e) {
+    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(mysplit[1]);
+    			return ""+offlineplayer.getRemainingAir();
+    		}
 		}
 		else if (line.contains("{bed:")) {
+    		try {
 			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
 			return ""+offlineplayer.getBedSpawnLocation().getX()+","+offlineplayer.getBedSpawnLocation().getY()+","+offlineplayer.getBedSpawnLocation().getZ();
+    		}
+    		catch (Exception e) {
+    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(mysplit[1]);
+    			return ""+offlineplayer.getBedSpawnLocation().getX()+","+offlineplayer.getBedSpawnLocation().getY()+","+offlineplayer.getBedSpawnLocation().getZ();
+    		}
 		}
 		else if (line.contains("{exp:")) {
+    		try {
 			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
 			return ""+offlineplayer.getTotalExperience();
+    		}
+    		catch (Exception e) {
+    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(mysplit[1]);
+    			return ""+offlineplayer.getTotalExperience();
+    		}
 		}
 		else if (line.contains("{lvl:")) {
+    		try {
 			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
 			ExperienceManager expMan = new ExperienceManager(user);
 			return ""+expMan.getLevelForExp((int) Math.floor(offlineplayer.getTotalExperience()));
+    		}
+    		catch (Exception e) {
+    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(mysplit[1]);
+    			ExperienceManager expMan = new ExperienceManager(user);
+    			return ""+expMan.getLevelForExp((int) Math.floor(offlineplayer.getTotalExperience()));
+    		}
 		}
 		else if (line.contains("{money:")) {
 			return ""+econ.getBalance(mysplit[1]);
@@ -803,58 +985,121 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 			return ""+Bukkit.getOfflinePlayer(mysplit[1]).isOp();
 		}
 		else if (line.contains("{itemid:")) {
-			//TODO item
+    		try {
 			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
 			return ""+offlineplayer.getItemInHand();
+    		}
+    		catch (Exception e) {
+    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(mysplit[1]);
+    			return ""+offlineplayer.getItemInHand();
+    		}
 		}
 		else if (line.contains("{itemamount:")) {
+    		try {
 			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
 			return ""+offlineplayer.getInventory().getItemInHand().getAmount();
+    		}
+    		catch (Exception e) {
+    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(mysplit[1]);
+    			return ""+offlineplayer.getInventory().getItemInHand().getAmount();
+    		}
 		}
 		else if (line.contains("{itemname:")) {
+    		try {
 			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
 			return ""+offlineplayer.getInventory().getItemInHand().getType().toString();
+    		}
+    		catch (Exception e) {
+    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(mysplit[1]);
+    			return ""+offlineplayer.getInventory().getItemInHand().getType().toString();
+    		}
 		}
 		else if (line.contains("{durability:")) {
+    		try {
 			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
 			return ""+offlineplayer.getInventory().getItemInHand().getDurability();
+    		}
+    		catch (Exception e) {
+    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(mysplit[1]);
+    			return ""+offlineplayer.getInventory().getItemInHand().getDurability();
+    		}
 		}
-		else if (line.contains("{gamemode}")) {
-			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
-			if(offlineplayer.getGameMode() == GameMode.CREATIVE){
-	        	return "CREATIVE";
-	        }
-	        else if(offlineplayer.getGameMode() == GameMode.SURVIVAL){
-	        	return "SURVIVAL";
-	        }
-	        else {
-	        	return "ADVENTURE";
-	        }
+		else if (line.contains("{gamemode:")) {
+			try {
+				ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
+				if(offlineplayer.getGameMode().equals(GameMode.CREATIVE)){
+		        	return "CREATIVE";
+		        }
+		        else if(offlineplayer.getGameMode().equals(GameMode.SURVIVAL)){
+		        	return "SURVIVAL";
+		        }
+		        else {
+		        	return "ADVENTURE";
+		        }
+	    		}
+	    		catch (Exception e) {
+	    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(mysplit[1]);
+	    			if(offlineplayer.getGameMode().equals(GameMode.CREATIVE)){
+	    	        	return "CREATIVE";
+	    	        }
+	    	        else if(offlineplayer.getGameMode().equals(GameMode.SURVIVAL)){
+	    	        	return "SURVIVAL";
+	    	        }
+	    	        else {
+	    	        	return "ADVENTURE";
+	    	        }
+	    		}
 		}
 		else if (line.contains("{direction:")) {
-			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
-        	String tempstr = "null";
-            int degrees = (Math.round(offlineplayer.getLocation().getYaw()) + 270) % 360;
-            if (degrees <= 22)  {tempstr="WEST";}
-            else if (degrees <= 67) {tempstr="NORTHWEST";}
-            else if (degrees <= 112) {tempstr="NORTH";}
-            else if (degrees <= 157) {tempstr="NORTHEAST";}
-            else if (degrees <= 202) {tempstr="EAST";}
-            else if (degrees <= 247) {tempstr="SOUTHEAST";}
-            else if (degrees <= 292) {tempstr="SOUTH";}
-            else if (degrees <= 337) {tempstr="SOUTHWEST";}
-            else if (degrees <= 359) {tempstr="WEST";}
-            return tempstr;
+    		try {
+				ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
+				String tempstr = "null";
+	            int degrees = (Math.round(offlineplayer.getLocation().getYaw()) + 270) % 360;
+	            if (degrees <= 22)  {tempstr="WEST";}
+	            else if (degrees <= 67) {tempstr="NORTHWEST";}
+	            else if (degrees <= 112) {tempstr="NORTH";}
+	            else if (degrees <= 157) {tempstr="NORTHEAST";}
+	            else if (degrees <= 202) {tempstr="EAST";}
+	            else if (degrees <= 247) {tempstr="SOUTHEAST";}
+	            else if (degrees <= 292) {tempstr="SOUTH";}
+	            else if (degrees <= 337) {tempstr="SOUTHWEST";}
+	            else if (degrees <= 359) {tempstr="WEST";}
+	            return tempstr;
+    		}
+    		catch (Exception e) {
+    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(mysplit[1]);
+    			String tempstr = "null";
+                int degrees = (Math.round(offlineplayer.getLocation().getYaw()) + 270) % 360;
+                if (degrees <= 22)  {tempstr="WEST";}
+                else if (degrees <= 67) {tempstr="NORTHWEST";}
+                else if (degrees <= 112) {tempstr="NORTH";}
+                else if (degrees <= 157) {tempstr="NORTHEAST";}
+                else if (degrees <= 202) {tempstr="EAST";}
+                else if (degrees <= 247) {tempstr="SOUTHEAST";}
+                else if (degrees <= 292) {tempstr="SOUTH";}
+                else if (degrees <= 337) {tempstr="SOUTHWEST";}
+                else if (degrees <= 359) {tempstr="WEST";}
+                return tempstr;
+    		}
 		}
 		else if (line.contains("{health:")) {
+    		try {
 			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
 			return String.valueOf(offlineplayer.getHealthInt());
+    		}
+    		catch (Exception e) {
+    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(mysplit[1]);
+    			return String.valueOf(offlineplayer.getHealthInt());
+    		}
 		}
 		else if (line.contains("{biome:")) {
 			Location loc = getloc(mysplit[1], user);
 			return loc.getWorld().getBiome(loc.getBlockX(), loc.getBlockZ()).toString();
 		}
-    	
+		else if (line.contains("{location:")) {
+			Location loc = getloc(mysplit[1], user);
+			return loc.getWorld().getName()+","+loc.getBlockX()+","+loc.getBlockY()+","+loc.getBlockZ();
+		}
     	
     	
     	
@@ -1027,10 +1272,10 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     			return ""+user.getDisplayName();
     		}
     		else if (line2.equals("{gamemode}")) {
-    			if(user.getGameMode() == GameMode.CREATIVE){
+    			if(user.getGameMode().equals(GameMode.CREATIVE)){
     	        	return "CREATIVE";
     	        }
-    	        else if(user.getGameMode() == GameMode.SURVIVAL){
+    	        else if(user.getGameMode().equals(GameMode.SURVIVAL)){
     	        	return "SURVIVAL";
     	        }
     	        else {
@@ -1054,15 +1299,34 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     		else if (line2.equals("{biome}")) {
     			return user.getWorld().getBiome(user.getLocation().getBlockX(), user.getLocation().getBlockZ()).toString();
     		}
+    		else if (line2.equals("{location}")) {
+    			return user.getWorld().getName()+","+user.getLocation().getBlockX()+","+user.getLocation().getBlockY()+","+user.getLocation().getBlockZ();
+    		}
     		else if (line2.equals("{health}")) {
     			return String.valueOf(user.getHealth());
     		}
     	}
     	if (interact!=null) {
     		try {
-	    		if (line.equals("{uses}")) {
+    			if (line.equals("{line1}")) {
+    				Sign sign = (Sign) (interact.getBlock().getState());
+    				return sign.getLine(0);
+    			}
+    			else if (line.equals("{line2}")) {
+    				Sign sign = (Sign) (interact.getBlock().getState());
+    				return sign.getLine(1);
+    			}
+    			else if (line.equals("{line3}")) {
+    				Sign sign = (Sign) (interact.getBlock().getState());
+    				return sign.getLine(2);
+    			}
+    			else if (line.equals("{line4}")) {
+    				Sign sign = (Sign) (interact.getBlock().getState());
+    				return sign.getLine(3);
+    			}
+    			else if (line.equals("{uses}")) {
 	    			for (int i = 0;i<list.size();i++) {
-		        		if (list.get(i).equals(interact)) {
+		        		if (list.get(i).equals(interact)&&players.get(i).equals(user.getName())) {
 		        			return ""+clicks.get(i);
 		        		}
 		        	}
@@ -1070,7 +1334,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 	    		else if (line.contains("{uses:")) {
 	    			int maxclicks = Integer.parseInt(mysplit[1]);
 	    			for (int i = 0;i<list.size();i++) {
-		        		if (list.get(i).equals(interact)) {
+		        		if (list.get(i).equals(interact)&&players.get(i).equals(user.getName())) {
 		        			int myclicks = clicks.get(i);
 		        			if (myclicks > maxclicks) {
 		        				return ""+(myclicks%maxclicks);
@@ -1080,6 +1344,9 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 		        			}
 		        		}
 		        	}
+	    		}
+	    		else if (line.contains("{blockloc}")) {
+	    			return interact.getWorld().getName()+","+interact.getBlockX()+","+interact.getBlockY()+","+interact.getBlockZ();
 	    		}
     		}
     		 catch (Exception e) {
@@ -1103,17 +1370,16 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 	    			List<String> current = myconfig.getStringList("scripting.placeholders."+mycustom);
 	    			String mycommands = StringUtils.join(current,";");
 	    			for(int i = 0; i < mysplit.length; i++) {
-	    				mycommands.replace("{arg"+i+"}", mysplit[i]);
+	    				mycommands = mycommands.replace("{arg"+i+"}", mysplit[i]);
 	    			}
 	    			try {
 	    				String result = execute(mycommands,user,sender,elevation,interact);
-	    				if (result.substring(0,3).equals("if ")) {
+	    				if (result.substring(0,Math.min(3, result.length())).equals("if ")) {
 	    					return ""+testif(result);
 	    				}
 	    			return result;
 	    			}
 	    			catch (Exception e) {
-//	    				System.out.println("F "+e);
 	    			}
     			}
     		}
@@ -1269,7 +1535,6 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 		}
 	}
 	public boolean iswhitelisted(String lines) {
-//		System.out.println("WHITELIST "+lines);
 		List<String> mylist= getConfig().getStringList("signs.autoupdate.whitelist");
 		for(String current:mylist){
 			if(lines.contains("{"+current+"}")) {
@@ -1356,7 +1621,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     			if ((args[0].equalsIgnoreCase("reload"))){
     				failed = false;
     				if (checkperm(player,"insignsplus.reload")) {
-    					this.reloadConfig();
+    					reloadConfig();
     					getConfig().getConfigurationSection("signs").set("placeholders", null);
     			        File f1 = new File(getDataFolder() + File.separator + "scripts");
     			        File[] mysigns = f1.listFiles();
@@ -1374,14 +1639,14 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     	    			try {
     		    			Set<String> vars = getConfig().getConfigurationSection("scripting.variables").getKeys(false);
     		    			for(String current : vars) {
-    		    				globals.put("{"+current+"}", this.getConfig().getString("scripting.variables."+current));
+    		    				globals.put("{"+current+"}", getConfig().getString("scripting.variables."+current));
     		    			}
     	    			}
     	    			catch (Exception e) {
     	    				
     	    			}
     	    			counter = 0;
-    	    			this.saveDefaultConfig();
+    	    			saveDefaultConfig();
     	    			msg(player,"&aRELOADED!");
     				}
     				else {
@@ -1394,16 +1659,16 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     				if (checkperm(player,"insignsplus.save")) {
     					getConfig().getConfigurationSection("scripting").set("variables", null);
     					counter2 = 0;
-        				System.out.println("[InSignsPlus] Saving variables...");
+        				msg(null,"[InSignsPlus] Saving variables...");
         		        for (final Entry<String, Object> node : globals.entrySet()) {
         		        	getConfig().options().copyDefaults(true);
         		        	getConfig().set("scripting.variables."+(""+node.getKey()).substring(1,(""+node.getKey()).length()-1), (""+node.getValue()));
         		        	
-        		        	this.saveConfig();
-        		        	this.reloadConfig();
+        		        	saveConfig();
+        		        	reloadConfig();
         		        }
-            			this.saveConfig();
-            			this.reloadConfig();
+            			saveConfig();
+            			reloadConfig();
     	    			msg(player,"&aSAVED!");
     				}
     				else {
@@ -1433,6 +1698,13 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     	if (mystring.substring(0, 2).equalsIgnoreCase("if")) {
     		mystring = mystring.substring(3,mystring.length());
     	}
+    	if (mystring.equalsIgnoreCase("false")) {
+    		return false;
+    	}
+    	else if (mystring.equalsIgnoreCase("true")) {
+    		return true;
+    	}
+
     	int splittype = 0;
     	mystring=mystring.trim();
     	if (mystring.contains("!=") == true) {
@@ -1472,65 +1744,105 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     		splittype = 1;
     	}
     	boolean toreturn = false;
+    	try {
     	String left = args[0].trim();
     	String right = args[1].trim();
-    	try {
-    		boolean failed = false;
-			int result1 = 0;
-			int result2 = 1;
-    		try {
-    		result1 = (int) Double.parseDouble("" + engine.eval(left));
-    		result2 = (int) Double.parseDouble("" + engine.eval(right));
-    		}
-    		catch (Exception e) {
-    			failed = true;
-    		}
-    		if (failed == false) {
-    		if (splittype == 1) { if (result1==result2) { toreturn = true; } }
-    		else if (splittype == 2) { if (result1>result2) { toreturn = true; } }
-    		else if (splittype == 3) { if (result1<result2) { toreturn = true; } }
-    		else if (splittype == 4) { if (result1>=result2) { toreturn = true; } }
-    		else if (splittype == 5) { if (result1<=result2) { toreturn = true; } }
-    		else if (splittype == 6) { if (result1!=result2) { toreturn = true; } }
-    		}
-		} catch (Exception e) {
+		boolean failed = false;
+		try {
+		Object result1 = null;
+		Object result2 = null;
+		result1 = engine.eval(left);
+		result2 = engine.eval(right);
+		try {
+			Double result3 = Double.parseDouble(""+result1);
+			Double result4 = Double.parseDouble(""+result2);
+			if (splittype == 1) { if (result3==result4) { toreturn = true; } }
+    		else if (splittype == 2) { if (result3>result4) { toreturn = true; } }
+    		else if (splittype == 3) { if (result3<result4) { toreturn = true; } }
+    		else if (splittype == 4) { if (result3>=result4) { toreturn = true; } }
+    		else if (splittype == 5) { if (result3<=result4) { toreturn = true; } }
+    		else if (splittype == 6) { if (result3!=result4) { toreturn = true; } }
+			return toreturn;
+		}
+		catch (Exception e) {
 			
 		}
-    	if (toreturn == false) {
-    	try {
-    		boolean failed = false;
-			String result1 = "true";
-			String result2 = "false";
-    		try {
-    		result1 = left.trim();
-    		result2 = right.trim();
-    		}
-    		catch (Exception e3) {
-    			failed = true;
-    		}
-    		if (failed == false) {
-    		if (splittype == 1) { if (result1.equals(result2)) { toreturn = true; } }
-    		else if (splittype == 2) { if (result1.length()>result2.length()) { toreturn = true; } }
-    		else if (splittype == 3) { if (result1.length()<result2.length()) { toreturn = true; } }
-    		else if (splittype == 4) { if (result1.length()>=result2.length()) { toreturn = true; } }
-    		else if (splittype == 5) { if (result1.length()<=result2.length()) { toreturn = true; } }
-    		else if (splittype == 6) { if (result1.equals(result2)==false) { toreturn = true; } }
-    		else if (splittype == 7) { if (result1.equalsIgnoreCase(result2)) { toreturn = true; } }
-    		}
-		} catch (Exception e1) {
+		try {
+			Integer result3 = Integer.parseInt(""+result1);
+			Integer result4 = Integer.parseInt(""+result2);
+			if (splittype == 1) { if (result3==result4) { toreturn = true; } }
+    		else if (splittype == 2) { if (result3>result4) { toreturn = true; } }
+    		else if (splittype == 3) { if (result3<result4) { toreturn = true; } }
+    		else if (splittype == 4) { if (result3>=result4) { toreturn = true; } }
+    		else if (splittype == 5) { if (result3<=result4) { toreturn = true; } }
+    		else if (splittype == 6) { if (result3!=result4) { toreturn = true; } }
+			return toreturn;
 		}
-    	}   	
-    	if (mystring.equalsIgnoreCase("false")) {
-    		toreturn = false;
+		catch (Exception e) {
+			
+		}
+		try {
+			Float result3 = Float.parseFloat(""+result1);
+			Float result4 = Float.parseFloat(""+result2);
+			if (splittype == 1) { if (result3==result4) { toreturn = true; } }
+    		else if (splittype == 2) { if (result3>result4) { toreturn = true; } }
+    		else if (splittype == 3) { if (result3<result4) { toreturn = true; } }
+    		else if (splittype == 4) { if (result3>=result4) { toreturn = true; } }
+    		else if (splittype == 5) { if (result3<=result4) { toreturn = true; } }
+    		else if (splittype == 6) { if (result3!=result4) { toreturn = true; } }
+			return toreturn;
+		}
+		catch (Exception e) {
+			
+		}
+		try {
+			Long result3 = Long.parseLong(""+result1);
+			Long result4 = Long.parseLong(""+result2);
+			if (splittype == 1) { if (result3==result4) { toreturn = true; } }
+    		else if (splittype == 2) { if (result3>result4) { toreturn = true; } }
+    		else if (splittype == 3) { if (result3<result4) { toreturn = true; } }
+    		else if (splittype == 4) { if (result3>=result4) { toreturn = true; } }
+    		else if (splittype == 5) { if (result3<=result4) { toreturn = true; } }
+    		else if (splittype == 6) { if (result3!=result4) { toreturn = true; } }
+			return toreturn;
+		}
+		catch (Exception e) {
+			
+		}
+		try {
+    		if (splittype == 1) { if (left.equals(right)) { toreturn = true; } }
+    		else if (splittype == 2) { if (left.compareTo(right)>0) { toreturn = true; } }
+    		else if (splittype == 3) { if (left.compareTo(right)<0) { toreturn = true; } }
+    		else if (splittype == 4) { if (left.compareTo(right)>=0) { toreturn = true; } }
+    		else if (splittype == 5) { if (left.compareTo(right)<=0) { toreturn = true; } }
+    		else if (splittype == 6) { if (left.equals(right)==false) { toreturn = true; } }
+    		else if (splittype == 7) { if (left.equalsIgnoreCase(right)) { toreturn = true; } }
+			return toreturn;
+		}
+		catch (Exception e) {
+		}
+		}
+		catch (Exception e) {
+			try {
+	    		if (splittype == 1) { if (left.equals(right)) { toreturn = true; } }
+	    		else if (splittype == 2) { if (left.compareTo(right)>0) { toreturn = true; } }
+	    		else if (splittype == 3) { if (left.compareTo(right)<0) { toreturn = true; } }
+	    		else if (splittype == 4) { if (left.compareTo(right)>=0) { toreturn = true; } }
+	    		else if (splittype == 5) { if (left.compareTo(right)<=0) { toreturn = true; } }
+	    		else if (splittype == 6) { if (left.equals(right)==false) { toreturn = true; } }
+	    		else if (splittype == 7) { if (left.equalsIgnoreCase(right)) { toreturn = true; } }
+				return toreturn;
+			}
+			catch (Exception e2) {
+			}
+		}
     	}
-    	else if (mystring.equalsIgnoreCase("true")) {
-    		toreturn = true;
+    	catch (Exception e3) {
     	}
-    	
     	return toreturn;
     }
 	public void isadd(Player player, Location loc) {
-		if (list.contains(loc)==false) {
+		if ((list.contains(loc)&&players.contains(player.getName()))==false) {
 		players.add(player.getName());
 		list.add(loc);
 		clicks.add(0);
@@ -1548,8 +1860,8 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 	    	catch (Throwable e) {
 	    		
 	    	}
-	    	this.reloadConfig();
-	    	this.saveConfig();
+	    	reloadConfig();
+	    	saveConfig();
 			msg(null,"f&oSAVING VARIABLES!");
 			try {
 	        for (final Entry<String, Object> node : globals.entrySet()) {
@@ -1604,7 +1916,6 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
             				mytest+=mycmds[j]+";";
             			}
             			else {
-//            				System.out.println("END "+mycmds[j]);
             			}
             			if ((depth2 == 0)||(j==mycmds.length-1)) {
             				if (cmdargs[1].contains(":")) {
@@ -1812,7 +2123,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 					getServer().dispatchCommand(getServer().getConsoleSender(), mycommand);
 				}
 				else {
-					System.out.println(evaluate(mycommand, user,sender,elevation,interact));
+					msg(null,evaluate(mycommand, user,sender,elevation,interact));
 				}
 			}
 			
@@ -1828,7 +2139,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
         	
         	}
         	else {
-        		System.out.println(colorise(getmsg("ERROR"))+e2);
+        		msg(null,colorise(getmsg("ERROR"))+e2);
         	}
         }
     	return "null";
@@ -1838,26 +2149,26 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 
 	@Override
     public void onEnable(){
+		
+		
+		
 		protocolmanager = ProtocolLibrary.getProtocolManager();
 		plugin = this;
         if (!setupEconomy() ) {
             log.severe(String.format("[%s] - Disabled due to no Vault dependency found!", getDescription().getName()));
-            getServer().getPluginManager().disablePlugin(this);
+            Bukkit.getServer().getPluginManager().disablePlugin(this);
             return;
         }
         saveResource("english.yml", true);
-        Plugin insignsPlugin = getServer().getPluginManager().getPlugin("InSigns");
-        if((insignsPlugin != null) && insignsPlugin.isEnabled()) {
-        	if (getConfig().getBoolean("signs.autoupdate.enabled")) {
-        		isenabled = true;
+        Plugin insignsPlugin = Bukkit.getServer().getPluginManager().getPlugin("InSigns");
+        if((insignsPlugin != null)) {
+        	if (insignsPlugin.isEnabled()) {
+	            msg(null,"&c[Info] Plugin 'InSigns' is no longer required..");
         	}
-        	isf = new InSignsFeature(insignsPlugin,this);
-            getServer().getPluginManager().registerEvents(isf,this);
-            System.out.println("Plugin 'InSigns' found. Using it now.");
         } else {
-            System.out.println("Plugin 'InSigns' not found. Additional features disabled.");
-            isenabled = true;
+            
         }
+        isenabled = true;
         File f8 = new File(getDataFolder() + File.separator+"scripts"+File.separator+"example.yml");
         if(f8.exists()!=true) {  saveResource("scripts"+File.separator+"example.yml", false); }
         File f9 = new File(getDataFolder() + File.separator+"scripts"+File.separator+"test.js");
@@ -1889,12 +2200,9 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 	            Location loc = new Location(player.getWorld(), packetx,packety,packetz);
 	            
 	            Sign sign = (Sign) (loc.getBlock().getState());
-//	            System.out.println("LOC "+loc.toString()+" | "+loc.getBlock().getData());
-//	            System.out.println("LN "+StringUtils.join(sign.getLines()));
 	            String[] lines = sign.getLines();
 	            String unmodified = StringUtils.join(sign.getLines());
-	            if (list.contains(loc)==false) {
-//	            	System.out.println(1+" "+StringUtils.join(lines));
+	            if ((list.contains(loc)&&players.contains(player.getName()))==false) {
 					boolean modified = false;
 					if (lines[0].equals("")==false) {
 						String result = evaluate(lines[0],player,player, false,loc);
@@ -1925,7 +2233,6 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 						}
 					}
 					if (modified==true) {
-//						System.out.println(2+" "+unmodified);
 						for (int i = 0; i < 4; i++) {
 		            		if (lines[i].length()>15) {
 			            		if ((i < 3)) {
@@ -1938,7 +2245,6 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 		            	}
 						if(iswhitelisted(unmodified)) {
 							isadd(player, loc);
-//							System.out.println("LINES "+unmodified);
 							packet.getStringArrays().write(0, lines);
 			    			event.setPacket(packet);
 						}
@@ -1948,7 +2254,6 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 						}
 					}
 					else {
-//						System.out.println(3);
 					}
 	            }
 	            else {
@@ -1958,7 +2263,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 	            	lines[3] = colorise(evaluate(lines[3],player,player, false,loc));
 	            	for (int i = 0; i < 4; i++) {
 	            		if (lines[i].length()>15) {
-		            		if ((i < 4)) {
+		            		if ((i < 3)) {
 		            			if (lines[i+1].isEmpty()) {
 		            				lines[i+1] = lines[i].substring(15);
 		            			}
@@ -1966,7 +2271,6 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 		            		lines[i] = lines[i].substring(0,15);
 	            		}
 	            	}
-//	            	System.out.println("LINES "+StringUtils.join(lines));
 	            	packet.getStringArrays().write(0, lines);
 	    			event.setPacket(packet);
 	            }
@@ -1975,13 +2279,13 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
         }
         getConfig().options().copyDefaults(true);
         final Map<String, Object> options = new HashMap<String, Object>();
-        getConfig().set("version", "0.6.0");
+        getConfig().set("version", "0.6.4");
         options.put("language","english");
         options.put("signs.autoupdate.enabled",true);
         options.put("signs.autoupdate.buffer",1000);
         options.put("signs.autoupdate.updates-per-milli",1);
         options.put("signs.autoupdate.interval",1);
-        List<String> whitelist = Arrays.asList("display","uses","money","prefix","suffix","group","x","y","z","lvl","exhaustion","health","exp","hunger","air","maxhealth","maxair","gamemode","direction","biome","itemname","itemid","itemamount","durability","dead","sleeping","whitelisted","operator","sneaking","itempickup","flying","blocking","age","bed","compass","spawn","worldticks","time","time12","epoch","epochmilli","epochnano","online","worlds","banlist","baniplist","operators","whitelist","randchoice","rand","elevated","matchgroup","matchplayer","hasperm","js","config","passenger","lastplayed");
+        List<String> whitelist = Arrays.asList("location","age","localtime","localtime12","display","uses","money","prefix","suffix","group","x","y","z","lvl","exhaustion","health","exp","hunger","air","maxhealth","maxair","gamemode","direction","biome","itemname","itemid","itemamount","durability","dead","sleeping","whitelisted","operator","sneaking","itempickup","flying","blocking","age","bed","compass","spawn","worldticks","time","time12","epoch","epochmilli","epochnano","online","worlds","banlist","baniplist","operators","whitelist","randchoice","rand","elevated","matchgroup","matchplayer","hasperm","js","config","passenger","lastplayed");
         options.put("signs.autoupdate.whitelist",whitelist);
         List<String> example = Arrays.asList("return &4Hello!");
         options.put("scripting.placeholders.example",example);
@@ -1994,7 +2298,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
         	Set<String> vars = getConfig().getConfigurationSection("scripting.variables").getKeys(false);
         	for(String current : vars) {
         		
-    			globals.put("{"+current+"}", this.getConfig().getString("scripting.variables."+current));
+    			globals.put("{"+current+"}", getConfig().getString("scripting.variables."+current));
     		}
         }
         catch (Exception e) {
@@ -2003,8 +2307,8 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     	saveConfig();
         setupPermissions();
         setupChat();
-    	this.saveDefaultConfig();
-    	getServer().getPluginManager().registerEvents(this, this);
+    	saveDefaultConfig();
+    	Bukkit.getServer().getPluginManager().registerEvents(this, this);
     	if (getConfig().getInt("signs.autoupdate.interval")>0) {
     		timer.schedule (mytask,0l, 1);
     	}
@@ -2035,7 +2339,6 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 								if (sign!=null) {
 									double dist = loc.distanceSquared(player.getLocation());
 					            if (dist<96) {
-//					            	System.out.println("UPDATING");
 					            	if (isf==null) {
 					            	PacketContainer packet = protocolmanager.createPacket(PacketType.Play.Server.UPDATE_SIGN);
 					            	try {
@@ -2050,51 +2353,43 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 					            	}
 					            	}
 					            	else {
-					            		isf.sendSignChange(player,sign);
+//					            		isf.sendSignChange(player,sign);
 					            	}
 								}
 					            else if (dist > (Bukkit.getViewDistance()*24)*(Bukkit.getViewDistance()*24)) {
-//					            	System.out.println("too far");
 					            	list.remove(timerlast);
 					            	clicks.remove(timerlast);
 									players.remove(timerlast);
 					            }
 								}
 								else {
-//									System.out.println("sign=null");
 					            	list.remove(timerlast);
 					            	clicks.remove(timerlast);
 									players.remove(timerlast);
 								}
 							}
 							else {
-//								System.out.println("unloaded chunk");
 				            	list.remove(timerlast);
 				            	clicks.remove(timerlast);
 								players.remove(timerlast);
 							}
 						}
 						else {
-//							System.out.println("wrong map");
 			            	list.remove(timerlast);
 			            	clicks.remove(timerlast);
 							players.remove(timerlast);
 							}
 						}
 						else {
-//							System.out.println("p=null");
 			            	list.remove(timerlast);
 			            	clicks.remove(timerlast);
 							players.remove(timerlast);
 						}
 					}
 					catch (Exception e) {
-//						System.out.println("1 "+e);
 		            	list.remove(timerlast);
 		            	clicks.remove(timerlast);
 						players.remove(timerlast);
-//						System.out.println("ERROR "+e);
-//						System.out.println("2");
 					}
 						timerlast++;
 					}
@@ -2106,7 +2401,6 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 			if (counter0%50==0) {
 				if (counter0>=1000) {
 					counter0=0;
-//					System.out.println("SIZE: "+list.size());
 					counter++;
 					counter2++;
 					if (counter>=getConfig().getInt("signs.autoupdate.interval")) {
@@ -2117,30 +2411,25 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 				Long elapsed = System.currentTimeMillis()-timerstart;
 				timerstart = System.currentTimeMillis();
 				if (elapsed>100) {
-//					System.out.println("LAG");
 					islagging = true;
 					if (list.size()>getConfig().getInt("signs.autoupdate.buffer")) {
-//						System.out.println("1");
 						list = list.subList(10,list.size());
 						players = players.subList(10,players.size());
 						clicks = clicks.subList(10,clicks.size());
-//						System.out.println("2");
 					}
 				}
 				else {
 					if (list.size()>getConfig().getInt("signs.autoupdate.buffer")*4) {
-//						System.out.println("1");
 						list = list.subList(10,list.size());
 						players = players.subList(10,players.size());
 						clicks = clicks.subList(10,clicks.size());
-//						System.out.println("2");
 					}
 					islagging = false;
 				}
 			if (counter2 > 1200) {
 				try {
 				counter2 = 0;
-				System.out.println("&9[&bISP&9] &fSAVING VARIABLES!");
+				msg(null,"&9[&bISP&9] &fSAVING VARIABLES!");
 				getConfig().getConfigurationSection("scripting").set("variables", null);
 		        for (final Entry<String, Object> node : globals.entrySet()) {
 		        	getConfig().options().copyDefaults(true);
@@ -2148,7 +2437,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 		        	
 		        	saveConfig();
 		        }
-		        System.out.println("DONE!");
+		        msg(null,"DONE!");
 				}
 				catch (Exception e) {
 					
@@ -2159,6 +2448,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 		
 	};
 	
+	
 	@EventHandler
     public void onPlayerInteract(PlayerInteractEvent event)
     {
@@ -2166,7 +2456,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 			Block block = event.getClickedBlock();
 	        if ((block.getType() == Material.SIGN_POST) || (block.getType() == Material.WALL_SIGN)) {
 	        	for (int i = 0;i<list.size();i++) {
-	        		if (list.get(i).equals(block.getLocation())) {
+	        		if (list.get(i).equals(block.getLocation())&&players.get(i).equals(event.getPlayer().getName())) {
 	        			clicks.set(i, clicks.get(i)+1);
 	        		}
 	        	}
