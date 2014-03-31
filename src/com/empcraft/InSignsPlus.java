@@ -56,28 +56,29 @@ import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 
 
-public final class InSignsExtended extends JavaPlugin implements Listener {
-	public boolean isenabled = false;
+public final class InSignsPlus extends JavaPlugin implements Listener {
+	private boolean isenabled = false;
 	private static final Logger log = Logger.getLogger("Minecraft");
-    public static Economy econ = null;
-    public static Permission perms = null;
-    public static Chat chat = null;
-    public static int counter0 = 0;
-    public static int counter = 0;
-    public static int counter2 = 0;
-    public static Map<String, Object> globals = new HashMap<String, Object>();
-    public int recursion = 0;
-	public static List<Location> list = new ArrayList();
-	public static List<String> players = new ArrayList();
-	public static List<Integer> clicks = new ArrayList();
-	public long timerstart = 0;
-	public boolean islagging = false;
-	public int timerlast = 0;
+    private static Economy econ = null;
+    private static Permission perms = null;
+    private static Chat chat = null;
+    private static int counter0 = 0;
+    private static int counter = 0;
+    private static int counter2 = 0;
+    private static Map<String, Object> globals = new HashMap<String, Object>();
+    private int recursion = 0;
+	private static List<Location> list = new ArrayList();
+	private static List<String> players = new ArrayList();
+	private static List<Integer> clicks = new ArrayList();
+	private long timerstart = 0;
+	private boolean islagging = false;
+	private int timerlast = 0;
 	private static ProtocolManager protocolmanager;
-	InSignsExtended plugin;
-	public Object isf;
+	InSignsPlus plugin;
+	private Object isf;
+	public List<Placeholder> placeholders;
 	
-	public ScriptEngine engine = (new ScriptEngineManager()).getEngineByName("JavaScript");
+	private ScriptEngine engine = (new ScriptEngineManager()).getEngineByName("JavaScript");
 	
 	
 	public Location getloc(String string,Player user) {
@@ -139,7 +140,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 		}
 		return null;
 	}
-    public String fphs(String line, Player user, Player sender, Boolean elevation,Location interact) {
+    private String fphs(String line, Player user, Player sender, Boolean elevation,Location interact) {
     	String[] mysplit = line.substring(1,line.length()-1).split(":");
     	if (mysplit.length==2) {
     		if ((Bukkit.getPlayer(mysplit[1])!=null)) {
@@ -147,6 +148,17 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 				line = StringUtils.join(mysplit,":").replace(":"+mysplit[1],"");
         	}
     	}
+    	
+    	for (Placeholder placeholder:placeholders) {
+    		String key = placeholder.getKey();
+    		if (line.contains("{"+key+"}")) {
+    			return placeholder.getValue(user, interact, new String[0], elevation);
+    		}
+    		else if (line.contains("{"+key+":")) {
+    			return placeholder.getValue(user, interact, line.substring(2+key.length(), line.length()-1).split(":"), elevation);
+    		}
+    	}
+    	
     	if (line.contains("{setgroup:")) {
     		boolean hasperm = false;
     		if (sender==null) {
@@ -802,7 +814,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     			List<String> names = new ArrayList<String>();
                 File playersFolder = new File("world" + File.separator + "players");
                 String[] dat = playersFolder.list(new FilenameFilter() {
-                    public boolean accept(File f, String s) {
+                	public boolean accept(File f, String s) {
                         return s.endsWith(".dat");
                     }
                 });
@@ -1373,7 +1385,9 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 	    				mycommands = mycommands.replace("{arg"+i+"}", mysplit[i]);
 	    			}
 	    			try {
+	    				System.out.println("1 "+line);
 	    				String result = execute(mycommands,user,sender,elevation,interact);
+	    				System.out.println("RESULT");
 	    				if (result.substring(0,Math.min(3, result.length())).equals("if ")) {
 	    					return ""+testif(result);
 	    				}
@@ -1389,7 +1403,9 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     	
     }
     public String evaluate(String line, Player user, Player sender, Boolean elevation,Location interact) {
-        String[] args = line.split(" "); 
+    	try {
+    	System.out.println("L "+line);
+    	String[] args = line.split(" "); 
         for(int i = 0; i < args.length; i++) {
         	if (line.contains("{arg"+(i+1)+"}")){
         		line.replace("{arg"+(i+1)+"}", args[i]);
@@ -1419,9 +1435,15 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
        				boolean replaced = false;
        				if (replaced==false) {
        					try {
-       						line = line.replace(toreplace, fphs(toreplace,user,sender,elevation,interact));
+       						if (recursion<512) {
+       							line = line.replace(toreplace, fphs(toreplace,user,sender,elevation,interact));
+       						}
+       						else {
+       							
+       						}
        					}
-       					catch (Exception e) {
+   						catch (Exception e) {
+   							e.printStackTrace();
        						line = line.replace(toreplace, "null");
        					}
        				}
@@ -1473,9 +1495,15 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
        		}
        	}
         if (line.equals("null")) {
+        	System.out.println("R ");
         	return "";
         }
+        System.out.println("Return "+line);
     	return line;
+    	}
+    	catch (Exception e2) {
+    		e2.printStackTrace();return "";
+    	}
     }
 	public String javascript(String line) {
         try {
@@ -1841,7 +1869,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
     	}
     	return toreturn;
     }
-	public void isadd(Player player, Location loc) {
+	private void isadd(Player player, Location loc) {
 		if ((list.contains(loc)&&players.contains(player.getName()))==false) {
 		players.add(player.getName());
 		list.add(loc);
@@ -1939,8 +1967,8 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
             				if (mode == 1) {
             					myvar = "{"+cmdargs[1].split(":")[0]+"},"+globals.get("{"+cmdargs[1].split(":")[0]+"}");
             				}
-            				if (mylength>1024) {
-            					mylength = 1024;
+            				if (mylength>512) {
+            					mylength = 512;
             				}
             				break;
 	            			}
@@ -1949,7 +1977,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
             					if (mode == 1) {
             						globals.put("{"+cmdargs[1].split(":")[0]+"}", cmdargs[1].split(":")[1].split(",")[k]);
             					}
-            					if (recursion<1024) {
+            					if (recursion<512) {
             						execute(mytest,user,sender,elevation,interact);
             					}
             				}
@@ -1983,7 +2011,6 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
             else if (cmdargs[0].equalsIgnoreCase("if")) {
           	  if (hasperm&&(depth==last)) {
           		  last++;
-          		recursion = 0;
 					hasperm = testif(mycommand);
           	  }
           	  else {
@@ -2144,13 +2171,45 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
         }
     	return "null";
     }
-	
+    public synchronized List<Placeholder> getPlaceholders() {
+    	return placeholders;
+    }
+    
+    public synchronized void removePlaceholder (Placeholder placeholder) {
+    	placeholders.remove(placeholder);
+    }
+    public synchronized boolean removePlaceholderKey (String key) {
+    	for (int i = 0; i < placeholders.size(); i++) {
+    		if (placeholders.get(i).getKey().equals(key)) {
+    			placeholders.remove(i);
+    			return true;
+    		}
+    	}
+    	return false;
+    }
+    
+    public synchronized void addPlaceholder (Placeholder placeholder) {
+    	for (int i = 0; i < placeholders.size(); i++) {
+    		if (placeholders.get(i).getKey().equals(placeholder.getKey())) {
+    			placeholders.remove(i);
+    		}
+    	}
+    	placeholders.add(placeholder);
+    }
 
 
 	@Override
-    public void onEnable(){
-		
-		
+	public void onEnable(){
+		placeholders = new ArrayList();
+		addPlaceholder(new Placeholder("hiya")
+	    {
+		@Override
+		public String getValue(Player player, Location location,
+				
+				String[] modifiers, Boolean elevation) {
+			return "YOLO";
+		}
+	    });
 		
 		protocolmanager = ProtocolLibrary.getProtocolManager();
 		plugin = this;
@@ -2189,8 +2248,9 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
         if (isf==null) {
 	        protocolmanager.addPacketListener(new PacketAdapter(this, ListenerPriority.LOW, new PacketType[] { PacketType.Play.Server.UPDATE_SIGN })
 	        {
-	          public void onPacketSending(PacketEvent event)
+	        	public void onPacketSending(PacketEvent event)
 	          {
+	    	    recursion=0;
 	            PacketContainer packet = event.getPacket();
 	            packet = packet.shallowClone();
 	            int packetx = (packet.getIntegers().read(0)).intValue();
@@ -2279,7 +2339,7 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
         }
         getConfig().options().copyDefaults(true);
         final Map<String, Object> options = new HashMap<String, Object>();
-        getConfig().set("version", "0.6.4");
+        getConfig().set("version", "0.7.0");
         options.put("language","english");
         options.put("signs.autoupdate.enabled",true);
         options.put("signs.autoupdate.buffer",1000);
@@ -2448,9 +2508,23 @@ public final class InSignsExtended extends JavaPlugin implements Listener {
 		
 	};
 	
+	public void updateSign(Player player,Location location) {
+		PacketContainer packet = protocolmanager.createPacket(PacketType.Play.Server.UPDATE_SIGN);
+    	try {
+    		Sign sign = (Sign) (location.getBlock().getState());
+    		packet.getSpecificModifier(Integer.TYPE).write(0, Integer.valueOf(sign.getX()));
+    		packet.getSpecificModifier(Integer.TYPE).write(1, Integer.valueOf(sign.getY()));
+    		packet.getSpecificModifier(Integer.TYPE).write(2, Integer.valueOf(sign.getZ()));
+    		packet.getStringArrays().write(0, sign.getLines());
+    		protocolmanager.sendServerPacket(player, packet);
+    	}
+    	catch (Exception e) {
+    		e.printStackTrace();
+    	}
+	}
 	
 	@EventHandler
-    public void onPlayerInteract(PlayerInteractEvent event)
+    private void onPlayerInteract(PlayerInteractEvent event)
     {
 		if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
 			Block block = event.getClickedBlock();

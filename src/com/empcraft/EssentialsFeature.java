@@ -8,7 +8,7 @@ import com.earth2me.essentials.Essentials;
 
 public class EssentialsFeature  implements Listener {
 	Plugin essentialsPlugin;
-	InSignsExtended plugin;
+	InSignsPlus plugin;
     public EssentialsFeature() {
     }
     public String displayName(String name) {
