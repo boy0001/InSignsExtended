@@ -183,179 +183,6 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     	catch (Exception e) {
     		
     	}
-    	if (line.contains("{setgroup:")) {
-    		Player sender = getSender();
-    		boolean hasperm = false;
-    		if (sender==null) {
-    			hasperm = true;
-    		}
-    		else if (elevation) {
-    			hasperm = true;
-    		}
-    		if (hasperm) {
-    		if ((mysplit.length == 2)&&(user!=null)) {
-    			perms.playerAddGroup(user, mysplit[1]);
-    			if (perms.getPrimaryGroup(user).equals(mysplit[1])==false) {
-        			perms.playerRemoveGroup(user, perms.getPrimaryGroup(user));
-        			perms.playerRemoveGroup(user, mysplit[1]);
-        			perms.playerAddGroup(user, mysplit[1]);
-    			}
-    		}
-    		else if ((mysplit.length == 3)) {
-    			if ((Bukkit.getPlayer(mysplit[1])!=null)) {
-    				perms.playerAddGroup(Bukkit.getPlayer(mysplit[1]), mysplit[2]);
-    				if (perms.getPrimaryGroup(Bukkit.getPlayer(mysplit[1])).equals(mysplit[2])==false) {
-            			perms.playerRemoveGroup(Bukkit.getPlayer(mysplit[1]), perms.getPrimaryGroup(user));
-            			perms.playerRemoveGroup(Bukkit.getPlayer(mysplit[1]), mysplit[2]);
-            			perms.playerAddGroup(Bukkit.getPlayer(mysplit[1]), mysplit[2]);
-    				}
-    			}
-    			
-    		}
-    		else if (mysplit.length == 4){
-    			try {
-    				perms.playerAddGroup(Bukkit.getWorld(mysplit[3]),mysplit[1], mysplit[2]);
-    				if (perms.getPrimaryGroup(Bukkit.getWorld(mysplit[3]),mysplit[1]).equals(mysplit[2])==false) {
-        				perms.playerRemoveGroup(Bukkit.getWorld(mysplit[3]),mysplit[1],perms.getPrimaryGroup(Bukkit.getWorld(mysplit[3]),mysplit[1]));
-        				perms.playerRemoveGroup(Bukkit.getWorld(mysplit[3]),mysplit[1],mysplit[2]);
-        				perms.playerAddGroup(Bukkit.getWorld(mysplit[3]),mysplit[1], mysplit[2]);
-    				}
-    			}
-    			catch (Exception e) {
-    			}
-    		}
-    	}
-    		return "null";
-    	}
-    	else if (line.contains("{delsub:")) {
-    		Player sender = getSender();
-    		boolean hasperm = false;
-    		if (sender==null) {
-    			hasperm = true;
-    		}
-    		else if (elevation) {
-    			hasperm = true;
-    		}
-    		if (hasperm) {
-    		if ((mysplit.length == 2)&&(user!=null)) {
-    			perms.playerRemoveGroup(user, mysplit[1]);
-    		}
-    		else if ((mysplit.length == 3)) {
-    			if ((Bukkit.getPlayer(mysplit[1])!=null)) {
-    				perms.playerRemoveGroup(Bukkit.getPlayer(mysplit[1]), mysplit[1]);
-    			}
-    		}
-    		else if (mysplit.length == 4){
-    			try {
-    				perms.playerRemoveGroup(Bukkit.getWorld(mysplit[3]),mysplit[1], mysplit[2]);
-    			}
-    			catch (Exception e) {
-    			}
-    		}
-    	}
-    		return "null";
-    	}
-    	else if (line.contains("{delperm:")) {
-    		Player sender = getSender();
-    		boolean hasperm = false;
-    		if (sender==null) {
-    			hasperm = true;
-    		}
-    		else if (elevation) {
-    			hasperm = true;
-    		}
-    		if (hasperm) {
-    		if ((mysplit.length == 2)&&(sender!=null)) {
-    			perms.playerRemove(user, mysplit[1]);
-    		}
-    		else if ((mysplit.length == 3)) {
-    			if ((Bukkit.getPlayer(mysplit[1])!=null)) {
-    				perms.playerRemove(Bukkit.getPlayer(mysplit[1]), mysplit[1]);
-    			}
-    		}
-    		else if (mysplit.length == 4){
-    			try {
-    				perms.playerRemove(Bukkit.getWorld(mysplit[3]),mysplit[1], mysplit[2]);
-    			}
-    			catch (Exception e) {
-    			}
-    		}
-    	}
-    		return "null";
-    	}
-    	else if (line.contains("{prefix:")) {
-    		Player sender = getSender();
-    		boolean hasperm = false;
-    		if (sender==null) {
-    			hasperm = true;
-    		}
-    		else if (elevation) {
-    			hasperm = true;
-    		}
-    		if (hasperm) {
-    		if ((mysplit.length == 2)) {
-    			if ((Bukkit.getPlayer(mysplit[1])!=null)) {
-    				return chat.getPlayerPrefix(Bukkit.getPlayer(mysplit[1]));
-    			}
-    			else {
-    				chat.setPlayerPrefix(user, mysplit[1]);
-    			}
-    		}
-    		if ((mysplit.length >= 3)) {
-    			if ((Bukkit.getPlayer(mysplit[1])!=null)) {
-    				chat.setPlayerPrefix(Bukkit.getPlayer(mysplit[1]), mysplit[2]);
-    			}
-    		}
-    	}
-    		return "null";
-    	}
-    	else if (line.contains("{suffix:")) {
-    		Player sender = getSender();
-    		boolean hasperm = false;
-    		if (sender==null) {
-    			hasperm = true;
-    		}
-    		else if (elevation) {
-    			hasperm = true;
-    		}
-    		if (hasperm) {
-    		if ((mysplit.length == 2)) {
-    			if ((Bukkit.getPlayer(mysplit[1])!=null)) {
-    				return chat.getPlayerSuffix(Bukkit.getPlayer(mysplit[1]));
-    			}
-    			else {
-    				chat.setPlayerSuffix(user, mysplit[1]);
-    			}
-    		}
-    		if ((mysplit.length == 3)) {
-    			if ((Bukkit.getPlayer(mysplit[1])!=null)) {
-    				chat.setPlayerSuffix(Bukkit.getPlayer(mysplit[1]), mysplit[2]);
-    			}
-    		}
-    		else if (mysplit.length == 4){
-    			try {
-    				chat.setPlayerSuffix(Bukkit.getWorld(mysplit[3]),mysplit[1], mysplit[2]);
-    			}
-    			catch (Exception e) {
-    			}
-    		}
-    	}
-    		return "null";
-    	}
-		else if (line.contains("{prefix:")) {
-			String myworld = "world";
-			if (user!=null) {
-				myworld = user.getWorld().getName();
-			}
-			return ""+chat.getPlayerPrefix(myworld, mysplit[1]);
-		}
-		else if (line.contains("{suffix:")) {
-			String myworld = "world";
-			if (user!=null) {
-				myworld = user.getWorld().getName();
-			}
-			return ""+chat.getPlayerSuffix(myworld, mysplit[1]);
-		}
     	for (Entry<String, Object> node : globals.entrySet()) {
     		if (line.equals(node.getKey())) {
     			return ""+node.getValue();
@@ -1354,9 +1181,7 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 			return ""+random.nextInt(stop-start)+start;
 		} });
     	addPlaceholder(new Placeholder("msg") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
-			
 			return getmsg(modifiers[0]);
-		
 		} });
     	addPlaceholder(new Placeholder("range") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		String mylist = "";
@@ -1375,12 +1200,8 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     		}
     		}
     		return mylist.substring(0,mylist.length()-1);
-    		
-    		
-    		
 		} });
     	addPlaceholder(new Placeholder("matchplayer") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
-			
     		List<Player> matches = getServer().matchPlayer(modifiers[0]);
     		String mymatches = "";
     		if (matches.isEmpty()==false) {
@@ -1392,23 +1213,16 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     		else {
     			return "null";
     		}
-		
 		} });
     	addPlaceholder(new Placeholder("matchgroup") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
-			
     		return matchgroup(modifiers[0]);
-		
 		} });
     	addPlaceholder(new Placeholder("index") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
-			
     		return modifiers[0].split(",")[Integer.parseInt(modifiers[1])];
-		
 		} });
     	addPlaceholder(new Placeholder("setindex") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
-			
     		String[] mylist = modifiers[0].split(",");
     		String newlist = "";
-    		
     		int myindex = Integer.parseInt(modifiers[1]);
     		for(int i = 0; i < mylist.length; i++) {
     			if (i==myindex) {
@@ -1419,26 +1233,21 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     			}
     		}
     		return newlist.substring(0,newlist.length()-1);
-		
 		} });
     	addPlaceholder(new Placeholder("delindex") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
-			
     		String[] mylist = modifiers[0].split(",");
     		String newlist = "";
     		int myindex = Integer.parseInt(modifiers[1]);
     		for(int i = 0; i < mylist.length; i++) {
     			if (i==myindex) {
-    				
     			}
     			else {
     				newlist+=mylist[i]+",";
     			}
     		}
     		return newlist.substring(0,newlist.length()-1);
-		
 		} });
     	addPlaceholder(new Placeholder("sublist") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
-			
     		String[] mylist = modifiers[0].split(",");
     		String newlist = "";
     		int i1 = Integer.parseInt(modifiers[1]);
@@ -1449,7 +1258,6 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     			}
     		}
     		return newlist.substring(0,newlist.length()-1);
-		
 		} });
     	addPlaceholder(new Placeholder("getindex") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		String[] mylist = modifiers[0].split(",");
@@ -1465,7 +1273,6 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     		return newlist.substring(0,newlist.length()-1);
 		} });
     	addPlaceholder(new Placeholder("listhas") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
-			
     		String[] mylist = modifiers[0].split(",");
     		for(int i = 0; i < mylist.length; i++) {
     			if (mylist[i].equals(modifiers[1])) {
@@ -1476,7 +1283,6 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 		
 		} });
     	addPlaceholder(new Placeholder("contains") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
-			
     		if (modifiers[0].contains(modifiers[1])) {
     			return "true";
     		}
@@ -1484,30 +1290,20 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     			return "true";
     		}
     		return "false";
-		
 		} });
     	addPlaceholder(new Placeholder("substring") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
-			
     		return modifiers[0].substring(Integer.parseInt(modifiers[1]), Integer.parseInt(modifiers[2]));
-		
 		} });
     	addPlaceholder(new Placeholder("size") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
-			
 			return ""+modifiers[0].split(",").length;
-		
 		} });
     	addPlaceholder(new Placeholder("length") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
-			
 			return ""+modifiers[0].length();
-		
 		} });
     	addPlaceholder(new Placeholder("split") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
-			
     		return modifiers[0].replace(modifiers[1],",");
-		
 		} });
     	addPlaceholder(new Placeholder("hasperm") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
-			
     		if (player==null) {
     			return "true";
     		}
@@ -1518,14 +1314,11 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     			return "true";
     		}
     		return "false";
-		
 		} });
     	addPlaceholder(new Placeholder("randchoice") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
-			
     		String[] mylist = modifiers[0].split(",");
     		Random random = new Random();
     		return mylist[random.nextInt(mylist.length-1)];
-		
 		} });
     	addPlaceholder(new Placeholder("worldtype") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
 			if (modifiers.length==1) {
@@ -1537,7 +1330,6 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 			}
 		} });
     	addPlaceholder(new Placeholder("listreplace") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
-			
     		String[] mylist = modifiers[0].split(",");
     		String newlist = "";
     		for(int i = 0; i < mylist.length; i++) {
@@ -1549,15 +1341,45 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     			return "null";
     		}
     		return newlist.substring(0,newlist.length()-1);
-		
 		} });
+    	addPlaceholder(new Placeholder("prefix") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+	    		if (modifiers.length==1) {
+	    			if (Bukkit.getPlayer(modifiers[0])==null) {
+	    				try {
+	    	    			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(modifiers[0]);
+	    	    			return chat.getPlayerPrefix(offlineplayer.getLocation().getWorld(), modifiers[0]);
+	    	        		}
+	    	        		catch (Exception e) {
+	    	        			IOP_1_7_2 offlineplayer = new IOP_1_7_2(modifiers[0]);
+	    	        			return chat.getPlayerPrefix(offlineplayer.getLocation().getWorld(), modifiers[0]);
+	    	        		}
+	    			}
+	    			return chat.getPlayerPrefix(Bukkit.getPlayer(modifiers[0]));
+	    		}
+	    		return chat.getPlayerPrefix(player);
+		} });
+    	addPlaceholder(new Placeholder("suffix") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			if (Bukkit.getPlayer(modifiers[0])==null) {
+    				try {
+    	    			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(modifiers[0]);
+    	    			return chat.getPlayerSuffix(offlineplayer.getLocation().getWorld(), modifiers[0]);
+    	        		}
+    	        		catch (Exception e) {
+    	        			IOP_1_7_2 offlineplayer = new IOP_1_7_2(modifiers[0]);
+    	        			return chat.getPlayerSuffix(offlineplayer.getLocation().getWorld(), modifiers[0]);
+    	        		}
+    			}
+    			return chat.getPlayerSuffix(Bukkit.getPlayer(modifiers[0]));
+    		}
+    		return chat.getPlayerSuffix(player);
+    	} });
     	addPlaceholder(new Placeholder("worldticks") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
 			if (modifiers.length==1) {
 				Location loc = getloc(modifiers[0], player);
 	    		return Long.toString(loc.getWorld().getTime());
 			}
     		return Long.toString(player.getWorld().getTime());
-		
 		} });
     	addPlaceholder(new Placeholder("time") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
