@@ -42,6 +42,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
@@ -76,7 +77,26 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 	private static ProtocolManager protocolmanager;
 	InSignsPlus plugin;
 	private Object isf;
-	public List<Placeholder> placeholders;
+	final Map<String, Placeholder> placeholders = new HashMap<String, Placeholder>();
+//	public List<Placeholder> placeholders;
+	private Player currentplayer = null;
+	private Player currentsender = null;
+	
+	public void setUser(Player player) {
+		currentplayer = player;
+	}
+	
+	public void setSender(Player player) {
+		currentsender = player;
+	}
+	
+	public Player getUser() {
+		return currentplayer;
+	}
+	
+	public Player getSender() {
+		return currentsender;
+	}
 	
 	private ScriptEngine engine = (new ScriptEngineManager()).getEngineByName("JavaScript");
 	
@@ -140,7 +160,8 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 		}
 		return null;
 	}
-    private String fphs(String line, Player user, Player sender, Boolean elevation,Location interact) {
+    private String fphs(String line, Boolean elevation,Location interact) {
+    	Player user = getUser();
     	String[] mysplit = line.substring(1,line.length()-1).split(":");
     	if (mysplit.length==2) {
     		if ((Bukkit.getPlayer(mysplit[1])!=null)) {
@@ -148,18 +169,22 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 				line = StringUtils.join(mysplit,":").replace(":"+mysplit[1],"");
         	}
     	}
-    	
-    	for (Placeholder placeholder:placeholders) {
-    		String key = placeholder.getKey();
-    		if (line.contains("{"+key+"}")) {
-    			return placeholder.getValue(user, interact, new String[0], elevation);
+    	try {
+    		String[] modifiers;
+    		String key = mysplit[0];
+    		try {
+    			modifiers = line.substring(2+key.length(), line.length()-1).split(":");
     		}
-    		else if (line.contains("{"+key+":")) {
-    			return placeholder.getValue(user, interact, line.substring(2+key.length(), line.length()-1).split(":"), elevation);
+    		catch (Exception e2) {
+    			modifiers = new String[0];
     		}
+    		return getPlaceholder(key).getValue(user, interact, modifiers, elevation);
     	}
-    	
+    	catch (Exception e) {
+    		
+    	}
     	if (line.contains("{setgroup:")) {
+    		Player sender = getSender();
     		boolean hasperm = false;
     		if (sender==null) {
     			hasperm = true;
@@ -203,6 +228,7 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     		return "null";
     	}
     	else if (line.contains("{delsub:")) {
+    		Player sender = getSender();
     		boolean hasperm = false;
     		if (sender==null) {
     			hasperm = true;
@@ -230,6 +256,7 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     		return "null";
     	}
     	else if (line.contains("{delperm:")) {
+    		Player sender = getSender();
     		boolean hasperm = false;
     		if (sender==null) {
     			hasperm = true;
@@ -257,6 +284,7 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     		return "null";
     	}
     	else if (line.contains("{prefix:")) {
+    		Player sender = getSender();
     		boolean hasperm = false;
     		if (sender==null) {
     			hasperm = true;
@@ -282,6 +310,7 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     		return "null";
     	}
     	else if (line.contains("{suffix:")) {
+    		Player sender = getSender();
     		boolean hasperm = false;
     		if (sender==null) {
     			hasperm = true;
@@ -313,665 +342,6 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     	}
     		return "null";
     	}
-    	else if (line.contains("{rand:")) {
-    		Random random = new Random();
-    		return (""+random.nextInt(Integer.parseInt(mysplit[1])));
-    	}
-    	else if (line.contains("{msg:")) {
-    		return getmsg(mysplit[1]);
-    	}
-    	else if (line.contains("{range:")) {
-    		String mylist = "";
-    		int start = 0;
-    		int stop = 0;
-    		if (mysplit.length==2) {
-    			stop = Integer.parseInt(mysplit[1]);
-    		}
-    		else if (mysplit.length==3) {
-    			start = Integer.parseInt(mysplit[1]);
-    			stop = Integer.parseInt(mysplit[2]);
-    		}
-    		if (stop-start<512) {
-    		for(int i = start; i <= stop; i++) {
-    			mylist+=i+",";
-    		}
-    		}
-    		return mylist.substring(0,mylist.length()-1);
-    	}
-    	else if (line.contains("{matchplayer:")) {
-    		List<Player> matches = getServer().matchPlayer(mysplit[1]);
-    		String mymatches = "";
-    		if (matches.isEmpty()==false) {
-    			for (Player match:matches) {
-    				mymatches+=match.getName()+",";
-    			}
-    			return mymatches.substring(0,mymatches.length()-1);
-    		}
-    		else {
-    			return "null";
-    		}
-    	}
-    	else if (line.contains("{matchgroup:")) {
-    		return matchgroup(mysplit[1]);
-    	}
-    	else if (line.contains("{index:")) {
-    		return mysplit[1].split(",")[Integer.parseInt(mysplit[2])];
-    	}
-    	else if (line.contains("{setindex:")) {
-    		String[] mylist = mysplit[1].split(",");
-    		String newlist = "";
-    		
-    		int myindex = Integer.parseInt(mysplit[2]);
-    		for(int i = 0; i < mylist.length; i++) {
-    			if (i==myindex) {
-    				newlist+=mysplit[3]+",";
-    			}
-    			else {
-    				newlist+=mylist[i]+",";
-    			}
-    		}
-    		return newlist.substring(0,newlist.length()-1);
-    	}
-    	else if (line.contains("{delindex:")) {
-    		String[] mylist = mysplit[1].split(",");
-    		String newlist = "";
-    		int myindex = Integer.parseInt(mysplit[2]);
-    		for(int i = 0; i < mylist.length; i++) {
-    			if (i==myindex) {
-    				
-    			}
-    			else {
-    				newlist+=mylist[i]+",";
-    			}
-    		}
-    		return newlist.substring(0,newlist.length()-1);
-    	}
-    	else if (line.contains("{sublist:")) {
-    		String[] mylist = mysplit[1].split(",");
-    		String newlist = "";
-    		int i1 = Integer.parseInt(mysplit[2]);
-    		int i2 = Integer.parseInt(mysplit[3]);
-    		for(int i = 0; i < mylist.length; i++) {
-    			if ((i>=i1)&&(i<=i2)) {
-    				newlist+=mylist[i]+",";
-    			}
-    		}
-    		return newlist.substring(0,newlist.length()-1);
-    	}
-    	else if (line.contains("{getindex:")) {
-    		String[] mylist = mysplit[1].split(",");
-    		String newlist = "";
-    		for(int i = 0; i < mylist.length; i++) {
-    			if (mylist[i].equals(mysplit[2])) {
-    				newlist+=i+",";
-    			}
-    		}
-    		if (newlist.equals("")) {
-    			return "null";
-    		}
-    		return newlist.substring(0,newlist.length()-1);
-    	}
-    	else if (line.contains("{listhas:")) {
-    		String[] mylist = mysplit[1].split(",");
-    		for(int i = 0; i < mylist.length; i++) {
-    			if (mylist[i].equals(mysplit[2])) {
-    				return "true";
-    			}
-    		}
-    		return "false";
-    	}
-    	else if (line.contains("{contains:")) {
-    		if (mysplit[1].contains(mysplit[2])) {
-    			return "true";
-    		}
-    		else if (mysplit[1].equals(mysplit[2])) {
-    			return "true";
-    		}
-    		return "false";
-    	}
-    	else if (line.contains("{substring:")) {
-    		return mysplit[1].substring(Integer.parseInt(mysplit[2]), Integer.parseInt(mysplit[3]));
-    	}
-    	else if (line.contains("{length:")) {
-    		if (mysplit[1].contains(",")) {
-    			return ""+mysplit[1].split(",").length;
-    		}
-    		else {
-    			return ""+mysplit[1].length();
-    		}
-    	}
-    	else if (line.contains("{split:")) {
-    		return mysplit[1].replace(mysplit[2],",");
-    	}
-    	else if (line.contains("{hasperm:")) {
-    		if (user==null) {
-    			return "true";
-    		}
-    		else if (mysplit.length==3) {
-    			return ""+perms.playerHas(user.getWorld(),mysplit[1], mysplit[2]);
-    		}
-    		else if (checkperm(user,mysplit[1])) {
-    			return "true";
-    		}
-    		return "false";
-    	}
-    	else if (line.contains("{randchoice:")) {
-    		String[] mylist = mysplit[1].split(",");
-    		Random random = new Random();
-    		return mylist[random.nextInt(mylist.length-1)];
-    	}
-    	else if (line.contains("{worldtype:")) {
-    		Location loc = getloc(mysplit[1], user);
-    		return ""+loc.getWorld().getWorldType().getName();
-    	}
-    	else if (line.contains("{listreplace:")) {
-    		String[] mylist = mysplit[1].split(",");
-    		String newlist = "";
-    		for(int i = 0; i < mylist.length; i++) {
-    			if (mylist[i].equals(mysplit[2])) {
-    				newlist+=mysplit[3]+",";
-    			}
-    		}
-    		if (newlist.equals("")) {
-    			return "null";
-    		}
-    		return newlist.substring(0,newlist.length()-1);
-    	}
-    	else if (line.contains("{worldticks}")) {
-    		return Long.toString(user.getWorld().getTime());
-    	}
-    	else if (line.contains("{worldticks:")) {
-    		Location loc = getloc(mysplit[1], user);
-    		return Long.toString(loc.getWorld().getTime());
-    	}
-    	else if (line.contains("{time}")) {
-    		Double time = user.getWorld().getTime() / 1000.0;
-    		Double time2 = time;
-    		if (time2>18) { time2-=25; }
-    		String hr = ""+(time2.intValue() + 6);
-    		String min = ""+((int) (60*(time%1)));
-    		if (min.length()==1) {
-    			min = "0"+min;
-    		}
-    		if (hr.length()==1) {
-    			hr = "0"+hr;
-    		}
-    		return ""+hr+":"+min;
-    	}
-    	else if (line.contains("{sectotime:")) {
-    		String toreturn = "";
-    		try {
-    		Long time = Long.parseLong(mysplit[1]);
-    		int years = 0;
-    		int weeks = 0;
-    		int days = 0;
-    		int hours = 0;
-    		int minutes = 0;
-    		int seconds = 0;
-    		if (time>=33868800) {
-    			years = (int) (time/33868800);
-    			time-=years*33868800;
-    			toreturn+=years+"y ";
-    		}
-    		if (time>=604800) {
-    			weeks = (int) (time/604800);
-    			time-=weeks*604800;
-    			toreturn+=weeks+"w ";
-    		}
-    		if (time>=86400) {
-    			days = (int) (time/86400);
-    			time-=days*86400;
-    			toreturn+=days+"d ";
-    		}
-    		if (time>=3600) {
-    			hours = (int) (time/3600);
-    			time-=hours*3600;
-    			toreturn+=hours+"h ";
-    		}
-    		if (time>=60) {
-    			minutes = (int) (time/60);
-    			time-=minutes*60;
-    			toreturn+=minutes+"m ";
-    		}
-    		if (toreturn.equals("")||time>0){
-    			toreturn+=(time)+"s ";
-    		}
-    		toreturn = toreturn.trim();
-    		}
-    		catch (Exception e) {
-    			e.printStackTrace();
-    		}
-    		return toreturn;
-    	}
-    	else if (line.contains("{localtime}")) {
-    		Date time = Calendar.getInstance().getTime();
-    		String hours = ""+time.getHours();
-    		String minutes = ""+time.getMinutes();
-    		String seconds = ""+time.getSeconds();
-    		if (hours.length()==1) {
-    			hours = "0"+hours;
-    		}
-    		if (minutes.length()==1) {
-    			minutes = "0"+minutes;
-    		}
-    		if (seconds.length()==1) {
-    			seconds = "0"+seconds;
-    		}
-    		return hours+":"+minutes+":"+seconds;
-    	}
-    	else if (line.contains("{localtime12}")) {
-    		String ampm = " AM";
-    		Date time = Calendar.getInstance().getTime();
-    		int hours = time.getHours();
-    		String minutes = ""+time.getMinutes();
-    		String seconds = ""+time.getSeconds();
-    		
-    		if (hours>12) {
-    			hours-=12;
-    			ampm = " PM";
-    		}
-    		else if(hours==12) {
-    			ampm = " PM";
-    		}
-    		else if (hours==0) {
-    			hours+=12;
-    		}
-    		
-    		if (minutes.length()==1) {
-    			minutes = "0"+minutes;
-    		}
-    		if (seconds.length()==1) {
-    			seconds = "0"+seconds;
-    		}
-    		
-    		String hr = ""+hours;
-    		if (hr.length()==1) {
-    			hr = "0"+hr;
-    		}
-    		return hr+":"+minutes+":"+seconds+ampm;
-    	}
-    	else if (line.contains("{time:")) {
-    		Location loc = getloc(mysplit[1], user);
-    		Double time = loc.getWorld().getTime() / 1000.0;
-    		Double time2 = time;
-    		if (time2>18) { time2-=25; }
-    		String hr = ""+(time2.intValue() + 6);
-    		String min = ""+((int) (60*(time%1)));
-    		if (min.length()==1) {
-    			min = "0"+min;
-    		}
-    		if (hr.length()==1) {
-    			hr = "0"+hr;
-    		}
-    		return ""+hr+":"+min;
-    	}
-    	else if (line.contains("{time12}")) {
-    		String ampm = " AM";
-    		Double time = user.getWorld().getTime() / 1000.0;
-    		Double time2 = time;
-    		if (time2>18) { time2-=24; }
-    		time2+=6;
-    		if (time2.intValue()>13) {
-    			time2-=12;
-    			ampm = " PM";
-    		}
-    		else if(time2>12) {
-    			ampm = " PM";
-    		}
-    		else if (time2 < 1) {
-    			time2+=12;
-    		}
-    		String hr = ""+(time2.intValue());
-    		String min = ""+((int) (60*(time%1)));
-    		if (min.length()==1) {
-    			min = "0"+min;
-    		}
-    		if (hr.length()==1) {
-    			hr = "0"+hr;
-    		}
-    		return ""+hr+":"+min+ampm;
-    	}
-    	else if (line.contains("{time12:")) {
-    		String ampm = " AM";
-    		Location loc = getloc(mysplit[1], user);
-    		Double time = loc.getWorld().getTime() / 1000.0;
-    		Double time2 = time;
-    		if (time2>18) { time2-=24; }
-    		time2+=6;
-    		if (time2.intValue()>13) {
-    			time2-=12;
-    			ampm = " PM";
-    		}
-    		else if(time2>12) {
-    			ampm = " PM";
-    		}
-    		else if (time2 < 1) {
-    			time2+=12;
-    		}
-    		String hr = ""+(time2.intValue());
-    		String min = ""+((int) (60*(time%1)));
-    		if (min.length()==1) {
-    			min = "0"+min;
-    		}
-    		if (hr.length()==1) {
-    			hr = "0"+hr;
-    		}
-    		return ""+hr+":"+min+ampm;
-    	}
-    	else if (line.contains("{replace:")) {
-    		return mysplit[1].replace(mysplit[2], mysplit[3]);
-    	}
-    	else if (line.contains("{config:")) {
-    		return getConfig().getString(mysplit[1]);
-    	}
-    	else if (line.contains("{structures:")) {
-    		Location loc = getloc(mysplit[1], user);
-    		return loc.getWorld().canGenerateStructures()+"";
-    	}
-    	else if (line.contains("{structures}")) {
-    		return ""+user.getWorld().canGenerateStructures();
-    	}
-    	else if (line.contains("{autosave}")) {
-    		return ""+user.getWorld().isAutoSave();
-    	}
-    	else if (line.contains("{autosave:")) {
-    		Location loc = getloc(mysplit[1], user);
-    		return loc.getWorld().isAutoSave()+"";
-    	}
-    	else if (line.contains("{animals:")) {
-    		Location loc = getloc(mysplit[1], user);
-    		return loc.getWorld().getAllowAnimals()+"";
-    	}
-    	else if (line.contains("{animals}")) {
-    		return ""+user.getWorld().getAllowAnimals();
-    	}
-    	else if (line.contains("{monsters:")) {
-    		Location loc = getloc(mysplit[1], user);
-    		return loc.getWorld().getAllowMonsters()+"";
-    	}
-    	else if (line.contains("{monsters}")) {
-    		return ""+user.getWorld().getAllowMonsters();
-    	}
-    	else if (line.contains("{online:")) {
-    		Location loc = getloc(mysplit[1], user);
-    		return ""+loc.getWorld().getPlayers();
-    	}
-    	else if (line.contains("{colors}")) {
-    		return "&1,&2,&3,&4,&5,&6,&7,&8,&9,&0,&a,&b,&c,&d,&e,&f,&r,&l,&m,&n,&o,&k";
-    	}
-    	else if (line.contains("{difficulty:")) {
-    		Location loc = getloc(mysplit[1], user);
-    		return loc.getWorld().getDifficulty().toString();
-    	}
-    	else if (line.contains("{difficulty}")) {
-    		return ""+user.getWorld().getDifficulty().name();
-    	}
-    	else if (line.contains("{weatherduration}")) {
-    		return ""+user.getWorld().getWeatherDuration();
-    	}
-    	else if (line.contains("{weatherduration:")) {
-    		Location loc = getloc(mysplit[1], user);
-    		return ""+loc.getWorld().getWeatherDuration();
-    	}
-    	else if (line.contains("{environment:")) {
-    		Location loc = getloc(mysplit[1], user);
-    		return loc.getWorld().getEnvironment().toString();
-    	}
-    	else if (line.contains("{environment}")) {
-    		return ""+user.getWorld().getEnvironment().name();
-    	}
-    	else if (line.contains("{player}")) {
-    		if (user==null) {
-    			return "CONSOLE";
-    		}
-    		else {
-    			return user.getName();
-    		}
-    	}
-    	else if (line.contains("{gvar}")) {
-    		return StringUtils.join(globals.keySet(),",").replace("{","").replace("}", "");
-    	}
-    	else if (line.contains("{sender}")) {
-    		if (sender==null) {
-    			return "CONSOLE";
-    		}
-    		else {
-    			return sender.getName();
-    		}
-    	}
-    	else if (line.contains("{elevated}")) {
-    		return ""+elevation;
-    	}
-    	else if (line.contains("{gamerules:")) {
-    		Location loc = getloc(mysplit[1], user);
-    		return StringUtils.join(loc.getWorld().getGameRules(),",");
-    	}
-    	else if (line.contains("{gamerules}")) {
-    		return StringUtils.join(user.getWorld().getGameRules(),",");
-    	}
-    	else if (line.contains("{seed:")) {
-    		Location loc = getloc(mysplit[1], user);
-    		return ""+loc.getWorld().getSeed();
-    	}
-    	else if (line.contains("{seed}")) {
-    		return ""+user.getWorld().getSeed();
-    	}
-    	else if (line.contains("{spawn:")) {
-    		Location loc = getloc(mysplit[1], user);
-    		return loc.getWorld().getName()+","+loc.getWorld().getSpawnLocation().getX()+","+loc.getWorld().getSpawnLocation().getY()+","+loc.getWorld().getSpawnLocation().getZ();
-    	}
-    	else if (line.contains("{difficulty}")) {
-    		return ""+user.getWorld().getSpawnLocation();
-    	}
-    	else if (line.contains("{count:")) {
-    		if (mysplit[1].contains(",")) {
-    			int count = 0;
-    			String[] mylist = mysplit[1].split(",");
-    			for (String mynum:mylist) {
-    				if (mynum.equals(mysplit[2])) {
-    					count+=1;
-    				}
-    			}
-    			return ""+count;
-    		}
-    		else {
-    			return ""+StringUtils.countMatches(mysplit[1],mysplit[2]);
-    		}
-    	}
-    	else if (line.equals("{epoch}")) {
-    		return Long.toString(System.currentTimeMillis()/1000);
-    	}
-    	else if (line.contains("{js:")) {
-    		return javascript(line.substring(4,line.length()-1));
-    	}
-    	else if (line.contains("{javascript:")) {
-    		return javascript(line.substring(4,line.length()-1));
-    	}
-    	else if (line.equals("{epochmilli}")) {
-    		return Long.toString(System.currentTimeMillis());
-    	}
-    	else if (line.equals("{epochnano}")) {
-    		return Long.toString(System.nanoTime());
-    	}
-    	else if (line.equals("{online}")) {
-    		String online = "";
-      		for (Player qwert:Bukkit.getServer().getOnlinePlayers()) {
-      			online+=qwert.getName()+",";
-      		}
-    		return online.substring(0,online.length()-1);
-    	}
-    	else if (line.equals("{motd}")) {
-    		return ""+Bukkit.getMotd();
-    	}
-    	else if (line.equals("{banlist}")) {
-    		String mylist = "";
-      		for (OfflinePlayer clist:Bukkit.getBannedPlayers()) {
-      			mylist+=clist.getName()+",";
-      		}
-    		return mylist.substring(0,mylist.length()-1);
-    	}
-    	else if (line.equals("{playerlist}")) {
-    			List<String> names = new ArrayList<String>();
-                File playersFolder = new File("world" + File.separator + "players");
-                String[] dat = playersFolder.list(new FilenameFilter() {
-                	public boolean accept(File f, String s) {
-                        return s.endsWith(".dat");
-                    }
-                });
-                for (String current : dat) {
-                    names.add(current.replaceAll(".dat$", ""));
-                }
-                return StringUtils.join(names,",");
-    	}
-    	else if (line.equals("{baniplist}")) {
-    		String mylist = "";
-      		for (String clist:Bukkit.getIPBans()) {
-      			mylist+=clist+",";
-      		}
-    		return mylist.substring(0,mylist.length()-1);
-    	}
-    	else if (line.equals("{worlds}")) {
-    		String mylist = "";
-      		for (World clist:getServer().getWorlds()) {
-      			mylist+=clist.getName()+",";
-      		}
-    		return mylist.substring(0,mylist.length()-1);
-    	}
-    	else if (line.equals("{slots}")) {
-    		return ""+Bukkit.getMaxPlayers();
-    	}
-    	else if (line.equals("{port}")) {
-    		return ""+Bukkit.getPort();
-    	}
-    	else if (line.equals("{version}")) {
-    		return Bukkit.getVersion().split(" ")[0];
-    	}
-    	else if (line.equals("{allowflight}")) {
-    		return ""+Bukkit.getAllowFlight();
-    	}
-    	else if (line.equals("{viewdistance}")) {
-    		return ""+Bukkit.getViewDistance();
-    	}
-    	else if (line.equals("{defaultgamemode}")) {
-    		return ""+Bukkit.getDefaultGameMode();
-    	}
-    	else if (line.equals("{operators}")) {
-    		String mylist = "";
-      		for (OfflinePlayer clist:Bukkit.getOperators()) {
-      			mylist+=clist.getName()+",";
-      		}
-    		return mylist.substring(0,mylist.length()-1);
-    	}
-    	else if (line.equals("{whitelist}")) {
-    		Set<OfflinePlayer> mylist = Bukkit.getWhitelistedPlayers();
-    		String mystr = "";
-    		Iterator<OfflinePlayer> it = mylist.iterator();
-    		for (int i=0;i<mylist.size();i++) {
-    			if (i==0) {
-    				mystr+=it.next().getName();
-    			}
-    			else {
-    				mystr+=","+it.next().getName();
-    			}
-    		}
-    		return mystr;
-    	}
-    	else if (line.equals("{plugins}")) {
-    		Plugin[] myplugins = getServer().getPluginManager().getPlugins();
-    		String mystr = "";
-    		for (int i=0;i<myplugins.length;i++) {
-    			if (i==0) {
-    				mystr+=myplugins[i].getName();
-    			}
-    			else {
-    				mystr+=","+myplugins[i].getName();
-    			}
-    		}
-    		return mystr;
-    	}
-    	else if (line.contains("{exhaustion:")) {
-    		try {
-			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
-			return ""+offlineplayer.getExhaustion();
-    		}
-    		catch (Exception e) {
-    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(mysplit[1]);
-    			return ""+offlineplayer.getExhaustion();
-    		}
-		}
-    	else if (line.contains("{display:")) {
-    		try {
-    			String nick = (new EssentialsFeature()).displayName(mysplit[1]);
-    			if (nick.equals("")) {
-    				return mysplit[1];
-    			}
-    			return nick;
-    		}
-    		catch (Exception e) {
-    			return mysplit[1];
-    		}
-		}
-		else if (line.contains("{firstjoin:")) {
-			return Long.toString(Bukkit.getOfflinePlayer(mysplit[1]).getFirstPlayed()/1000);		
-		}
-		else if (line.contains("{lastplayed:")) {
-			return Long.toString(Bukkit.getOfflinePlayer(mysplit[1]).getLastPlayed()/1000);		
-		}
-		else if (line.contains("{hunger:")) {
-    		try {
-			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
-			return ""+offlineplayer.getFoodLevel();
-    		}
-    		catch (Exception e) {
-    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(mysplit[1]);
-    			return ""+offlineplayer.getFoodLevel();
-    		}
-		}
-		else if (line.contains("{air:")) {
-    		try {
-			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
-			return ""+offlineplayer.getRemainingAir();
-    		}
-    		catch (Exception e) {
-    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(mysplit[1]);
-    			return ""+offlineplayer.getRemainingAir();
-    		}
-		}
-		else if (line.contains("{bed:")) {
-    		try {
-			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
-			return ""+offlineplayer.getBedSpawnLocation().getX()+","+offlineplayer.getBedSpawnLocation().getY()+","+offlineplayer.getBedSpawnLocation().getZ();
-    		}
-    		catch (Exception e) {
-    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(mysplit[1]);
-    			return ""+offlineplayer.getBedSpawnLocation().getX()+","+offlineplayer.getBedSpawnLocation().getY()+","+offlineplayer.getBedSpawnLocation().getZ();
-    		}
-		}
-		else if (line.contains("{exp:")) {
-    		try {
-			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
-			return ""+offlineplayer.getTotalExperience();
-    		}
-    		catch (Exception e) {
-    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(mysplit[1]);
-    			return ""+offlineplayer.getTotalExperience();
-    		}
-		}
-		else if (line.contains("{lvl:")) {
-    		try {
-			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
-			ExperienceManager expMan = new ExperienceManager(user);
-			return ""+expMan.getLevelForExp((int) Math.floor(offlineplayer.getTotalExperience()));
-    		}
-    		catch (Exception e) {
-    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(mysplit[1]);
-    			ExperienceManager expMan = new ExperienceManager(user);
-    			return ""+expMan.getLevelForExp((int) Math.floor(offlineplayer.getTotalExperience()));
-    		}
-		}
-		else if (line.contains("{money:")) {
-			return ""+econ.getBalance(mysplit[1]);
-		}
 		else if (line.contains("{prefix:")) {
 			String myworld = "world";
 			if (user!=null) {
@@ -986,387 +356,6 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 			}
 			return ""+chat.getPlayerSuffix(myworld, mysplit[1]);
 		}
-		else if (line.contains("{group:")) {
-			String myworld = "world";
-			if (user!=null) {
-				myworld = user.getWorld().getName();
-			}
-			return ""+chat.getPrimaryGroup(myworld, mysplit[1]);
-		}
-		else if (line.contains("{operator:")) {
-			return ""+Bukkit.getOfflinePlayer(mysplit[1]).isOp();
-		}
-		else if (line.contains("{itemid:")) {
-    		try {
-			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
-			return ""+offlineplayer.getItemInHand();
-    		}
-    		catch (Exception e) {
-    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(mysplit[1]);
-    			return ""+offlineplayer.getItemInHand();
-    		}
-		}
-		else if (line.contains("{itemamount:")) {
-    		try {
-			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
-			return ""+offlineplayer.getInventory().getItemInHand().getAmount();
-    		}
-    		catch (Exception e) {
-    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(mysplit[1]);
-    			return ""+offlineplayer.getInventory().getItemInHand().getAmount();
-    		}
-		}
-		else if (line.contains("{itemname:")) {
-    		try {
-			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
-			return ""+offlineplayer.getInventory().getItemInHand().getType().toString();
-    		}
-    		catch (Exception e) {
-    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(mysplit[1]);
-    			return ""+offlineplayer.getInventory().getItemInHand().getType().toString();
-    		}
-		}
-		else if (line.contains("{durability:")) {
-    		try {
-			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
-			return ""+offlineplayer.getInventory().getItemInHand().getDurability();
-    		}
-    		catch (Exception e) {
-    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(mysplit[1]);
-    			return ""+offlineplayer.getInventory().getItemInHand().getDurability();
-    		}
-		}
-		else if (line.contains("{gamemode:")) {
-			try {
-				ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
-				if(offlineplayer.getGameMode().equals(GameMode.CREATIVE)){
-		        	return "CREATIVE";
-		        }
-		        else if(offlineplayer.getGameMode().equals(GameMode.SURVIVAL)){
-		        	return "SURVIVAL";
-		        }
-		        else {
-		        	return "ADVENTURE";
-		        }
-	    		}
-	    		catch (Exception e) {
-	    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(mysplit[1]);
-	    			if(offlineplayer.getGameMode().equals(GameMode.CREATIVE)){
-	    	        	return "CREATIVE";
-	    	        }
-	    	        else if(offlineplayer.getGameMode().equals(GameMode.SURVIVAL)){
-	    	        	return "SURVIVAL";
-	    	        }
-	    	        else {
-	    	        	return "ADVENTURE";
-	    	        }
-	    		}
-		}
-		else if (line.contains("{direction:")) {
-    		try {
-				ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
-				String tempstr = "null";
-	            int degrees = (Math.round(offlineplayer.getLocation().getYaw()) + 270) % 360;
-	            if (degrees <= 22)  {tempstr="WEST";}
-	            else if (degrees <= 67) {tempstr="NORTHWEST";}
-	            else if (degrees <= 112) {tempstr="NORTH";}
-	            else if (degrees <= 157) {tempstr="NORTHEAST";}
-	            else if (degrees <= 202) {tempstr="EAST";}
-	            else if (degrees <= 247) {tempstr="SOUTHEAST";}
-	            else if (degrees <= 292) {tempstr="SOUTH";}
-	            else if (degrees <= 337) {tempstr="SOUTHWEST";}
-	            else if (degrees <= 359) {tempstr="WEST";}
-	            return tempstr;
-    		}
-    		catch (Exception e) {
-    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(mysplit[1]);
-    			String tempstr = "null";
-                int degrees = (Math.round(offlineplayer.getLocation().getYaw()) + 270) % 360;
-                if (degrees <= 22)  {tempstr="WEST";}
-                else if (degrees <= 67) {tempstr="NORTHWEST";}
-                else if (degrees <= 112) {tempstr="NORTH";}
-                else if (degrees <= 157) {tempstr="NORTHEAST";}
-                else if (degrees <= 202) {tempstr="EAST";}
-                else if (degrees <= 247) {tempstr="SOUTHEAST";}
-                else if (degrees <= 292) {tempstr="SOUTH";}
-                else if (degrees <= 337) {tempstr="SOUTHWEST";}
-                else if (degrees <= 359) {tempstr="WEST";}
-                return tempstr;
-    		}
-		}
-		else if (line.contains("{health:")) {
-    		try {
-			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(mysplit[1]);
-			return String.valueOf(offlineplayer.getHealthInt());
-    		}
-    		catch (Exception e) {
-    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(mysplit[1]);
-    			return String.valueOf(offlineplayer.getHealthInt());
-    		}
-		}
-		else if (line.contains("{biome:")) {
-			Location loc = getloc(mysplit[1], user);
-			return loc.getWorld().getBiome(loc.getBlockX(), loc.getBlockZ()).toString();
-		}
-		else if (line.contains("{location:")) {
-			Location loc = getloc(mysplit[1], user);
-			return loc.getWorld().getName()+","+loc.getBlockX()+","+loc.getBlockY()+","+loc.getBlockZ();
-		}
-    	
-    	
-    	
-    	
-    	
-    	
-    	
-    	
-    	
-		else if (line.equals("{storm:")) {
-			Location loc = getloc(mysplit[1], user);
-			if (loc.getWorld().hasStorm()) {
-				return "true";
-			}
-			return "false";
-		}
-		else if (line.equals("{thunder:")) {
-			Location loc = getloc(mysplit[1], user);
-			if (loc.getWorld().isThundering()) {
-				return "true";
-			}
-			return "false";
-		}
-		else if (line.contains("{x:")) {
-			return String.valueOf(Math.round(getloc(mysplit[1], user).getX()));
-		}
-		else if (line.contains("{y:")) {
-			return String.valueOf(Math.round(getloc(mysplit[1], user).getY()));
-		}
-		else if (line.contains("{z:")) {
-			return String.valueOf(Math.round(getloc(mysplit[1], user).getZ()));
-		}
-    	//TODO
-    	else if (user != null) {
-    		String line2 = line;
-    		if (line.contains(":")) {
-    			line2 = line.split(":")[0]+"}";
-    		}
-    		if (line2.equals("{player}")) {
-    			return ""+user.getName();
-    		}
-    		else if (line2.equals("{sneaking}")) {
-    			return ""+user.isSneaking();
-    		}
-    		if (line2.equals("{itempickup}")) {
-	          return ""+user.getCanPickupItems();
-	        }
-    		else if (line2.equals("{flying}")) {
-    			return ""+user.getAllowFlight();
-    		}
-    		else if (line2.equals("{blocking}")) {
-    			return ""+user.isBlocking();
-    		}
-    		else if (line2.equals("{exhaustion}")) {
-    			return ""+user.getExhaustion();
-    		}
-    		else if (line2.equals("{firstjoin}")) {
-    			return ""+Long.toString(user.getFirstPlayed()/1000);
-    		}
-    		else if (line2.equals("{hunger}")) {
-    			return ""+user.getFoodLevel();
-    		}
-    		else if (line2.equals("{grounded}")) {
-    			return ""+user.isOnGround();
-    		}
-    		else if (line2.equals("{passenger}")) {
-    			if (user.getVehicle()==null) {
-    				return "false";
-    			}
-    			return ""+user.getVehicle().toString();
-    		}
-    		else if (line2.equals("{maxhealth}")) {
-    			return ""+user.getMaxHealth();
-    		}
-    		else if (line2.equals("{maxair}")) {
-    			return ""+user.getMaximumAir();
-    		}
-    		else if (line2.equals("{air}")) {
-    			return ""+(user.getRemainingAir()/20);
-    		}
-    		else if (line2.equals("{age}")) {
-    			return ""+(user.getTicksLived()/20);
-    		}
-    		else if (line2.equals("{bed}")) {
-    			return ""+user.getBedSpawnLocation().getX()+","+user.getBedSpawnLocation().getY()+","+user.getBedSpawnLocation().getZ();
-    		}
-    		else if (line2.equals("{compass}")) {
-    			return ""+user.getCompassTarget().getX()+","+user.getCompassTarget().getY()+","+user.getCompassTarget().getZ();
-    		}
-    		else if (line2.equals("{storm}")) {
-    			if (user.getWorld().hasStorm()) {
-    				return "true";
-    			}
-    			return "false";
-    		}
-    		else if (line2.equals("{thunder}")) {
-    			if (user.getWorld().isThundering()) {
-    				return "true";
-    			}
-    			return "false";
-    		}
-
-    		else if (line2.equals("{dead}")) {
-    			return ""+user.isDead();
-    		}
-    		else if (line2.equals("{sleeping}")) {
-    			return ""+user.isSleeping();
-    		}
-    		else if (line2.equals("{whitelisted}")) {
-    			return ""+user.isWhitelisted();
-    		}
-    		else if (line2.equals("{world}")) {
-    			return user.getWorld().getName();
-    		}
-        	else if (line2.contains("{world:")) {
-        		return Bukkit.getWorld(mysplit[1]).getName();
-        	}
-        	else if (line2.equals("{x}")) {
-    			return String.valueOf(Math.round(user.getLocation().getX()));
-    		}
-    		else if (line2.equals("{y}")) {
-    			return String.valueOf(Math.round(user.getLocation().getY()));
-    		}
-    		else if (line2.equals("{z}")) {
-    			return String.valueOf(Math.round(user.getLocation().getZ()));
-    		}
-
-    		else if (line2.equals("{lvl}")) {
-    			ExperienceManager expMan = new ExperienceManager(user);
-    			return ""+expMan.getLevelForExp(expMan.getCurrentExp());
-    		}
-    		else if (line2.equals("{exp}")) {
-    			ExperienceManager expMan = new ExperienceManager(user);
-    			return ""+expMan.getCurrentExp();
-    		}
-    		else if (line2.equals("{money}")) {
-    			return ""+econ.getBalance(user.getName());
-    		}
-    		else if (line2.equals("{prefix}")) {
-    			return ""+chat.getPlayerPrefix(user);
-    		}
-    		else if (line2.equals("{suffix}")) {
-    			return ""+chat.getPlayerSuffix(user);
-    		}
-    		else if (line2.equals("{group}")) {
-    			return ""+perms.getPrimaryGroup(user);
-    		}
-    		else if (line2.equals("{operator}")) {
-				return ""+user.isOp();
-    		}
-    		else if (line2.equals("{worldtype}")) {
-    			return ""+user.getWorld().getWorldType();
-    		}
-    		else if (line2.equals("{itemid}")) {
-    			return String.valueOf(user.getInventory().getItemInHand().getTypeId());
-    		}
-    		else if (line2.equals("{itemamount}")) {
-    			return String.valueOf(user.getInventory().getItemInHand().getAmount());
-    		}
-    		else if (line2.equals("{itemname}")) {
-    			return String.valueOf(user.getInventory().getItemInHand().getType());
-    		}
-    		else if (line2.equals("{durability}")) {
-    			return String.valueOf(user.getInventory().getItemInHand().getDurability());
-    		}
-    		else if (line2.equals("{ip}")) {
-    			return user.getAddress().getAddress().toString().split("/")[(user.getAddress().toString().split("/").length)-1].split(":")[0];
-    		}
-    		else if (line2.equals("{display}")) {
-    			return ""+user.getDisplayName();
-    		}
-    		else if (line2.equals("{gamemode}")) {
-    			if(user.getGameMode().equals(GameMode.CREATIVE)){
-    	        	return "CREATIVE";
-    	        }
-    	        else if(user.getGameMode().equals(GameMode.SURVIVAL)){
-    	        	return "SURVIVAL";
-    	        }
-    	        else {
-    	        	return "ADVENTURE";
-    	        }
-    		}
-    		else if (line2.equals("{direction}")) {
-    	        	String tempstr = "null";
-    	            int degrees = (Math.round(user.getLocation().getYaw()) + 270) % 360;
-    	            if (degrees <= 22)  {tempstr="WEST";}
-    	            else if (degrees <= 67) {tempstr="NORTHWEST";}
-    	            else if (degrees <= 112) {tempstr="NORTH";}
-    	            else if (degrees <= 157) {tempstr="NORTHEAST";}
-    	            else if (degrees <= 202) {tempstr="EAST";}
-    	            else if (degrees <= 247) {tempstr="SOUTHEAST";}
-    	            else if (degrees <= 292) {tempstr="SOUTH";}
-    	            else if (degrees <= 337) {tempstr="SOUTHWEST";}
-    	            else if (degrees <= 359) {tempstr="WEST";}
-    	            return tempstr;
-    		}
-    		else if (line2.equals("{biome}")) {
-    			return user.getWorld().getBiome(user.getLocation().getBlockX(), user.getLocation().getBlockZ()).toString();
-    		}
-    		else if (line2.equals("{location}")) {
-    			return user.getWorld().getName()+","+user.getLocation().getBlockX()+","+user.getLocation().getBlockY()+","+user.getLocation().getBlockZ();
-    		}
-    		else if (line2.equals("{health}")) {
-    			return String.valueOf(user.getHealth());
-    		}
-    	}
-    	if (interact!=null) {
-    		try {
-    			if (line.equals("{line1}")) {
-    				Sign sign = (Sign) (interact.getBlock().getState());
-    				return sign.getLine(0);
-    			}
-    			else if (line.equals("{line2}")) {
-    				Sign sign = (Sign) (interact.getBlock().getState());
-    				return sign.getLine(1);
-    			}
-    			else if (line.equals("{line3}")) {
-    				Sign sign = (Sign) (interact.getBlock().getState());
-    				return sign.getLine(2);
-    			}
-    			else if (line.equals("{line4}")) {
-    				Sign sign = (Sign) (interact.getBlock().getState());
-    				return sign.getLine(3);
-    			}
-    			else if (line.equals("{uses}")) {
-	    			for (int i = 0;i<list.size();i++) {
-		        		if (list.get(i).equals(interact)&&players.get(i).equals(user.getName())) {
-		        			return ""+clicks.get(i);
-		        		}
-		        	}
-	    		}
-	    		else if (line.contains("{uses:")) {
-	    			int maxclicks = Integer.parseInt(mysplit[1]);
-	    			for (int i = 0;i<list.size();i++) {
-		        		if (list.get(i).equals(interact)&&players.get(i).equals(user.getName())) {
-		        			int myclicks = clicks.get(i);
-		        			if (myclicks > maxclicks) {
-		        				return ""+(myclicks%maxclicks);
-		        			}
-		        			else {
-		        				return ""+myclicks;
-		        			}
-		        		}
-		        	}
-	    		}
-	    		else if (line.contains("{blockloc}")) {
-	    			return interact.getWorld().getName()+","+interact.getBlockX()+","+interact.getBlockY()+","+interact.getBlockZ();
-	    		}
-    		}
-    		 catch (Exception e) {
-    		 }
-    	}
-    	else {
-    	}
-    	
     	for (Entry<String, Object> node : globals.entrySet()) {
     		if (line.equals(node.getKey())) {
     			return ""+node.getValue();
@@ -1377,7 +366,6 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 		custom = myconfig.getConfigurationSection("scripting.placeholders").getKeys(false);
     	if (custom.size()>0) {
     		for (String mycustom:custom) {
-    			
     			if (line.contains("{"+mycustom+":")||line.equals("{"+mycustom+"}")) {
 	    			List<String> current = myconfig.getStringList("scripting.placeholders."+mycustom);
 	    			String mycommands = StringUtils.join(current,";");
@@ -1385,9 +373,7 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 	    				mycommands = mycommands.replace("{arg"+i+"}", mysplit[i]);
 	    			}
 	    			try {
-	    				System.out.println("1 "+line);
-	    				String result = execute(mycommands,user,sender,elevation,interact);
-	    				System.out.println("RESULT");
+	    				String result = execute(mycommands,elevation,interact);
 	    				if (result.substring(0,Math.min(3, result.length())).equals("if ")) {
 	    					return ""+testif(result);
 	    				}
@@ -1398,13 +384,11 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     			}
     		}
     	}
-    	
     	return "null";
-    	
     }
-    public String evaluate(String line, Player user, Player sender, Boolean elevation,Location interact) {
+    public String evaluate(String line, Boolean elevation,Location interact) {
+    	Player user = getUser();
     	try {
-    	System.out.println("L "+line);
     	String[] args = line.split(" "); 
         for(int i = 0; i < args.length; i++) {
         	if (line.contains("{arg"+(i+1)+"}")){
@@ -1436,7 +420,7 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
        				if (replaced==false) {
        					try {
        						if (recursion<512) {
-       							line = line.replace(toreplace, fphs(toreplace,user,sender,elevation,interact));
+       							line = line.replace(toreplace, fphs(toreplace,elevation,interact));
        						}
        						else {
        							
@@ -1452,7 +436,6 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
        			}
        			isnew = false;
        		}
-       		
        	}
        	}	
        	if (line.contains(",")==false)
@@ -1495,10 +478,8 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
        		}
        	}
         if (line.equals("null")) {
-        	System.out.println("R ");
         	return "";
         }
-        System.out.println("Return "+line);
     	return line;
     	}
     	catch (Exception e2) {
@@ -1562,6 +543,7 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 			return "";
 		}
 	}
+
 	public boolean iswhitelisted(String lines) {
 		List<String> mylist= getConfig().getStringList("signs.autoupdate.whitelist");
 		for(String current:mylist){
@@ -1903,7 +885,8 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 				
 			}
     }
-    public String execute(String line, Player user, Player sender, Boolean elevation,Location interact) {
+    public String execute(String line, Boolean elevation,Location interact) {
+    	Player user = getUser();
     	recursion++;
     	try {
     	final Map<String, Object> locals = new HashMap<String, Object>();
@@ -1916,7 +899,7 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 		String myvar = ",null";
 		for(int i = 0; i < mycmds.length; i++) {
 			if (i>=i2) {
-			String mycommand = evaluate(mycmds[i],user,sender,elevation,interact);
+			String mycommand = evaluate(mycmds[i],elevation,interact);
             for (final Entry<String, Object> node : locals.entrySet()) {
               	 if (mycommand.contains(node.getKey())) {
               		 mycommand = mycommand.replace(node.getKey(), (CharSequence) node.getValue());
@@ -1978,7 +961,7 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
             						globals.put("{"+cmdargs[1].split(":")[0]+"}", cmdargs[1].split(":")[1].split(",")[k]);
             					}
             					if (recursion<512) {
-            						execute(mytest,user,sender,elevation,interact);
+            						execute(mytest,elevation,interact);
             					}
             				}
             				if (mode == 1) {
@@ -1997,11 +980,13 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
             	try {
             		if (cmdargs[1].equals("null")) {
             			user = null;
+            			setUser(user);
             		}
             		else {
 	            		user = Bukkit.getPlayer(cmdargs[1]);
 	            		if (user==null) {
 	            			user = lastuser;
+	            			setUser(user);
 	            		}
             		}
             	}
@@ -2046,7 +1031,7 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
             	  if (cmdargs.length>1) {
             	  if (cmdargs.length>2) {
             	  try {
-            	  globals.put("{"+evaluate(cmdargs[1],user,sender,elevation,interact)+"}", evaluate(StringUtils.join(Arrays.copyOfRange(cmdargs, 2, cmdargs.length)," "),user,sender,elevation,interact));
+            	  globals.put("{"+evaluate(cmdargs[1],elevation,interact)+"}", evaluate(StringUtils.join(Arrays.copyOfRange(cmdargs, 2, cmdargs.length)," "),elevation,interact));
             	  if (user != null) {
             	  }
             	  }
@@ -2073,7 +1058,7 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
             	  if (cmdargs.length>2) {
             	  try {
             		  
-            	  locals.put("{"+evaluate(cmdargs[1],user,sender,elevation,interact)+"}", evaluate(StringUtils.join(Arrays.copyOfRange(cmdargs, 2, cmdargs.length)," "),user,sender,elevation,interact));
+            	  locals.put("{"+evaluate(cmdargs[1],elevation,interact)+"}", evaluate(StringUtils.join(Arrays.copyOfRange(cmdargs, 2, cmdargs.length)," "),elevation,interact));
             	  if (user != null) {
             	  }
             	  }
@@ -2141,7 +1126,7 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 				 return mycommand.substring(7,mycommand.length());
 			 }
 			else {
-				msg(user,colorise(evaluate(mycommand, user,sender,elevation,interact)));
+				msg(user,colorise(evaluate(mycommand, elevation,interact)));
 			}
               }
 			else {
@@ -2150,7 +1135,7 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 					getServer().dispatchCommand(getServer().getConsoleSender(), mycommand);
 				}
 				else {
-					msg(null,evaluate(mycommand, user,sender,elevation,interact));
+					msg(null,evaluate(mycommand, elevation,interact));
 				}
 			}
 			
@@ -2172,45 +1157,25 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     	return "null";
     }
     public synchronized List<Placeholder> getPlaceholders() {
-    	return placeholders;
+    	return new ArrayList<Placeholder>(placeholders.values());
     }
     
-    public synchronized void removePlaceholder (Placeholder placeholder) {
-    	placeholders.remove(placeholder);
+    public synchronized Placeholder removePlaceholder (Placeholder placeholder) {
+    	return placeholders.remove(placeholder.getKey());
     }
-    public synchronized boolean removePlaceholderKey (String key) {
-    	for (int i = 0; i < placeholders.size(); i++) {
-    		if (placeholders.get(i).getKey().equals(key)) {
-    			placeholders.remove(i);
-    			return true;
-    		}
-    	}
-    	return false;
+    public synchronized Placeholder removePlaceholder (String key) {
+    	return placeholders.remove(key);
     }
     
     public synchronized void addPlaceholder (Placeholder placeholder) {
-    	for (int i = 0; i < placeholders.size(); i++) {
-    		if (placeholders.get(i).getKey().equals(placeholder.getKey())) {
-    			placeholders.remove(i);
-    		}
-    	}
-    	placeholders.add(placeholder);
+    	placeholders.put(placeholder.getKey(), placeholder);
     }
-
-
+    
+    public synchronized Placeholder getPlaceholder (String key) {
+    	return placeholders.get(key);
+    }
 	@Override
 	public void onEnable(){
-		placeholders = new ArrayList();
-		addPlaceholder(new Placeholder("hiya")
-	    {
-		@Override
-		public String getValue(Player player, Location location,
-				
-				String[] modifiers, Boolean elevation) {
-			return "YOLO";
-		}
-	    });
-		
 		protocolmanager = ProtocolLibrary.getProtocolManager();
 		plugin = this;
         if (!setupEconomy() ) {
@@ -2262,31 +1227,33 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 	            Sign sign = (Sign) (loc.getBlock().getState());
 	            String[] lines = sign.getLines();
 	            String unmodified = StringUtils.join(sign.getLines());
+	            setUser(player);
+	            setSender(player);
 	            if ((list.contains(loc)&&players.contains(player.getName()))==false) {
 					boolean modified = false;
 					if (lines[0].equals("")==false) {
-						String result = evaluate(lines[0],player,player, false,loc);
+						String result = evaluate(lines[0], false,loc);
 						if (result.equals(lines[0])==false) {
 							lines[0] = colorise(result);
 							modified = true;
 						}
 					}
 					if (lines[1].equals("")==false) {
-						String result = evaluate(lines[1],player,player, false,loc);
+						String result = evaluate(lines[1], false,loc);
 						if (result.equals(lines[1])==false) {
 							lines[1] = colorise(result);
 							modified = true;
 						}
 					}
 					if (lines[2].equals("")==false) {
-						String result = evaluate(lines[2],player,player, false,loc);
+						String result = evaluate(lines[2], false,loc);
 						if (result.equals(lines[2])==false) {
 							lines[2] = colorise(result);
 							modified = true;
 						}
 					}
 					if (lines[3].equals("")==false) {
-						String result = evaluate(lines[3],player,player, false,loc);
+						String result = evaluate(lines[3], false,loc);
 						if (result.equals(lines[3])==false) {
 							lines[3] = colorise(result);
 							modified = true;
@@ -2317,10 +1284,10 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 					}
 	            }
 	            else {
-	            	lines[0] = colorise(evaluate(lines[0],player,player, false,loc));
-	            	lines[1] = colorise(evaluate(lines[1],player,player, false,loc));
-	            	lines[2] = colorise(evaluate(lines[2],player,player, false,loc));
-	            	lines[3] = colorise(evaluate(lines[3],player,player, false,loc));
+	            	lines[0] = colorise(evaluate(lines[0], false,loc));
+	            	lines[1] = colorise(evaluate(lines[1], false,loc));
+	            	lines[2] = colorise(evaluate(lines[2], false,loc));
+	            	lines[3] = colorise(evaluate(lines[3], false,loc));
 	            	for (int i = 0; i < 4; i++) {
 	            		if (lines[i].length()>15) {
 		            		if ((i < 3)) {
@@ -2334,12 +1301,14 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 	            	packet.getStringArrays().write(0, lines);
 	    			event.setPacket(packet);
 	            }
+	            setUser(null);
+	            setSender(null);
 	          }
 	        });
         }
         getConfig().options().copyDefaults(true);
         final Map<String, Object> options = new HashMap<String, Object>();
-        getConfig().set("version", "0.7.0");
+        getConfig().set("version", "0.7.1");
         options.put("language","english");
         options.put("signs.autoupdate.enabled",true);
         options.put("signs.autoupdate.buffer",1000);
@@ -2373,6 +1342,1220 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     		timer.schedule (mytask,0l, 1);
     	}
     	
+    	//TODO ADD PLACEHOLDERS
+    	
+    	addPlaceholder(new Placeholder("rand") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		Random random = new Random();
+    		if (modifiers.length==1) {
+    			return ""+random.nextInt(Integer.parseInt(modifiers[0]));
+    		}
+			int start = Integer.parseInt(modifiers[0]);
+			int stop = Integer.parseInt(modifiers[1]);
+			return ""+random.nextInt(stop-start)+start;
+		} });
+    	addPlaceholder(new Placeholder("msg") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+			
+			return getmsg(modifiers[0]);
+		
+		} });
+    	addPlaceholder(new Placeholder("range") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		String mylist = "";
+    		int start = 0;
+    		int stop = 0;
+    		if (modifiers.length==1) {
+    			stop = Integer.parseInt(modifiers[0]);
+    		}
+    		else if (modifiers.length==2) {
+    			start = Integer.parseInt(modifiers[0]);
+    			stop = Integer.parseInt(modifiers[1]);
+    		}
+    		if (stop-start<512) {
+    		for(int i = start; i <= stop; i++) {
+    			mylist+=i+",";
+    		}
+    		}
+    		return mylist.substring(0,mylist.length()-1);
+    		
+    		
+    		
+		} });
+    	addPlaceholder(new Placeholder("matchplayer") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+			
+    		List<Player> matches = getServer().matchPlayer(modifiers[0]);
+    		String mymatches = "";
+    		if (matches.isEmpty()==false) {
+    			for (Player match:matches) {
+    				mymatches+=match.getName()+",";
+    			}
+    			return mymatches.substring(0,mymatches.length()-1);
+    		}
+    		else {
+    			return "null";
+    		}
+		
+		} });
+    	addPlaceholder(new Placeholder("matchgroup") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+			
+    		return matchgroup(modifiers[0]);
+		
+		} });
+    	addPlaceholder(new Placeholder("index") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+			
+    		return modifiers[0].split(",")[Integer.parseInt(modifiers[1])];
+		
+		} });
+    	addPlaceholder(new Placeholder("setindex") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+			
+    		String[] mylist = modifiers[0].split(",");
+    		String newlist = "";
+    		
+    		int myindex = Integer.parseInt(modifiers[1]);
+    		for(int i = 0; i < mylist.length; i++) {
+    			if (i==myindex) {
+    				newlist+=modifiers[2]+",";
+    			}
+    			else {
+    				newlist+=mylist[i]+",";
+    			}
+    		}
+    		return newlist.substring(0,newlist.length()-1);
+		
+		} });
+    	addPlaceholder(new Placeholder("delindex") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+			
+    		String[] mylist = modifiers[0].split(",");
+    		String newlist = "";
+    		int myindex = Integer.parseInt(modifiers[1]);
+    		for(int i = 0; i < mylist.length; i++) {
+    			if (i==myindex) {
+    				
+    			}
+    			else {
+    				newlist+=mylist[i]+",";
+    			}
+    		}
+    		return newlist.substring(0,newlist.length()-1);
+		
+		} });
+    	addPlaceholder(new Placeholder("sublist") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+			
+    		String[] mylist = modifiers[0].split(",");
+    		String newlist = "";
+    		int i1 = Integer.parseInt(modifiers[1]);
+    		int i2 = Integer.parseInt(modifiers[2]);
+    		for(int i = 0; i < mylist.length; i++) {
+    			if ((i>=i1)&&(i<=i2)) {
+    				newlist+=mylist[i]+",";
+    			}
+    		}
+    		return newlist.substring(0,newlist.length()-1);
+		
+		} });
+    	addPlaceholder(new Placeholder("getindex") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		String[] mylist = modifiers[0].split(",");
+    		String newlist = "";
+    		for(int i = 0; i < mylist.length; i++) {
+    			if (mylist[i].equals(modifiers[1])) {
+    				newlist+=i+",";
+    			}
+    		}
+    		if (newlist.equals("")) {
+    			return "null";
+    		}
+    		return newlist.substring(0,newlist.length()-1);
+		} });
+    	addPlaceholder(new Placeholder("listhas") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+			
+    		String[] mylist = modifiers[0].split(",");
+    		for(int i = 0; i < mylist.length; i++) {
+    			if (mylist[i].equals(modifiers[1])) {
+    				return "true";
+    			}
+    		}
+    		return "false";
+		
+		} });
+    	addPlaceholder(new Placeholder("contains") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+			
+    		if (modifiers[0].contains(modifiers[1])) {
+    			return "true";
+    		}
+    		else if (modifiers[0].equals(modifiers[1])) {
+    			return "true";
+    		}
+    		return "false";
+		
+		} });
+    	addPlaceholder(new Placeholder("substring") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+			
+    		return modifiers[0].substring(Integer.parseInt(modifiers[1]), Integer.parseInt(modifiers[2]));
+		
+		} });
+    	addPlaceholder(new Placeholder("size") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+			
+			return ""+modifiers[0].split(",").length;
+		
+		} });
+    	addPlaceholder(new Placeholder("length") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+			
+			return ""+modifiers[0].length();
+		
+		} });
+    	addPlaceholder(new Placeholder("split") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+			
+    		return modifiers[0].replace(modifiers[1],",");
+		
+		} });
+    	addPlaceholder(new Placeholder("hasperm") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+			
+    		if (player==null) {
+    			return "true";
+    		}
+    		else if (modifiers.length==2) {
+    			return ""+perms.playerHas(player.getWorld(),modifiers[0], modifiers[1]);
+    		}
+    		else if (checkperm(player,modifiers[0])) {
+    			return "true";
+    		}
+    		return "false";
+		
+		} });
+    	addPlaceholder(new Placeholder("randchoice") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+			
+    		String[] mylist = modifiers[0].split(",");
+    		Random random = new Random();
+    		return mylist[random.nextInt(mylist.length-1)];
+		
+		} });
+    	addPlaceholder(new Placeholder("worldtype") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+			if (modifiers.length==1) {
+	    		Location loc = getloc(modifiers[0], player);
+	    		return ""+loc.getWorld().getWorldType().getName();
+			}
+			else {
+				return ""+player.getWorld().getWorldType();
+			}
+		} });
+    	addPlaceholder(new Placeholder("listreplace") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+			
+    		String[] mylist = modifiers[0].split(",");
+    		String newlist = "";
+    		for(int i = 0; i < mylist.length; i++) {
+    			if (mylist[i].equals(modifiers[1])) {
+    				newlist+=modifiers[2]+",";
+    			}
+    		}
+    		if (newlist.equals("")) {
+    			return "null";
+    		}
+    		return newlist.substring(0,newlist.length()-1);
+		
+		} });
+    	addPlaceholder(new Placeholder("worldticks") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+			if (modifiers.length==1) {
+				Location loc = getloc(modifiers[0], player);
+	    		return Long.toString(loc.getWorld().getTime());
+			}
+    		return Long.toString(player.getWorld().getTime());
+		
+		} });
+    	addPlaceholder(new Placeholder("time") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+        		Location loc = getloc(modifiers[0], player);
+        		Double time = loc.getWorld().getTime() / 1000.0;
+        		Double time2 = time;
+        		if (time2>18) { time2-=25; }
+        		String hr = ""+(time2.intValue() + 6);
+        		String min = ""+((int) (60*(time%1)));
+        		if (min.length()==1) {
+        			min = "0"+min;
+        		}
+        		if (hr.length()==1) {
+        			hr = "0"+hr;
+        		}
+        		return ""+hr+":"+min;
+    		}
+    		Double time = player.getWorld().getTime() / 1000.0;
+    		Double time2 = time;
+    		if (time2>18) { time2-=25; }
+    		String hr = ""+(time2.intValue() + 6);
+    		String min = ""+((int) (60*(time%1)));
+    		if (min.length()==1) {
+    			min = "0"+min;
+    		}
+    		if (hr.length()==1) {
+    			hr = "0"+hr;
+    		}
+    		return ""+hr+":"+min;
+		} });
+    	addPlaceholder(new Placeholder("sectotime") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		String toreturn = "";
+    		try {
+    		Long time = Long.parseLong(modifiers[0]);
+    		int years = 0;
+    		int weeks = 0;
+    		int days = 0;
+    		int hours = 0;
+    		int minutes = 0;
+    		int seconds = 0;
+    		if (time>=33868800) {
+    			years = (int) (time/33868800);
+    			time-=years*33868800;
+    			toreturn+=years+"y ";
+    		}
+    		if (time>=604800) {
+    			weeks = (int) (time/604800);
+    			time-=weeks*604800;
+    			toreturn+=weeks+"w ";
+    		}
+    		if (time>=86400) {
+    			days = (int) (time/86400);
+    			time-=days*86400;
+    			toreturn+=days+"d ";
+    		}
+    		if (time>=3600) {
+    			hours = (int) (time/3600);
+    			time-=hours*3600;
+    			toreturn+=hours+"h ";
+    		}
+    		if (time>=60) {
+    			minutes = (int) (time/60);
+    			time-=minutes*60;
+    			toreturn+=minutes+"m ";
+    		}
+    		if (toreturn.equals("")||time>0){
+    			toreturn+=(time)+"s ";
+    		}
+    		toreturn = toreturn.trim();
+    		}
+    		catch (Exception e) {
+    			e.printStackTrace();
+    		}
+    		return toreturn;
+		} });
+    	addPlaceholder(new Placeholder("localtime") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		Date time = Calendar.getInstance().getTime();
+    		String hours = ""+time.getHours();
+    		String minutes = ""+time.getMinutes();
+    		String seconds = ""+time.getSeconds();
+    		if (hours.length()==1) {
+    			hours = "0"+hours;
+    		}
+    		if (minutes.length()==1) {
+    			minutes = "0"+minutes;
+    		}
+    		if (seconds.length()==1) {
+    			seconds = "0"+seconds;
+    		}
+    		return hours+":"+minutes+":"+seconds;
+		} });
+    	addPlaceholder(new Placeholder("localtime12") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		String ampm = " AM";
+    		Date time = Calendar.getInstance().getTime();
+    		int hours = time.getHours();
+    		String minutes = ""+time.getMinutes();
+    		String seconds = ""+time.getSeconds();
+    		
+    		if (hours>12) {
+    			hours-=12;
+    			ampm = " PM";
+    		}
+    		else if(hours==12) {
+    			ampm = " PM";
+    		}
+    		else if (hours==0) {
+    			hours+=12;
+    		}
+    		
+    		if (minutes.length()==1) {
+    			minutes = "0"+minutes;
+    		}
+    		if (seconds.length()==1) {
+    			seconds = "0"+seconds;
+    		}
+    		
+    		String hr = ""+hours;
+    		if (hr.length()==1) {
+    			hr = "0"+hr;
+    		}
+    		return hr+":"+minutes+":"+seconds+ampm;
+		} });
+    	addPlaceholder(new Placeholder("time12") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+        		String ampm = " AM";
+        		Location loc = getloc(modifiers[0], player);
+        		Double time = loc.getWorld().getTime() / 1000.0;
+        		Double time2 = time;
+        		if (time2>18) { time2-=24; }
+        		time2+=6;
+        		if (time2.intValue()>13) {
+        			time2-=12;
+        			ampm = " PM";
+        		}
+        		else if(time2>12) {
+        			ampm = " PM";
+        		}
+        		else if (time2 < 1) {
+        			time2+=12;
+        		}
+        		String hr = ""+(time2.intValue());
+        		String min = ""+((int) (60*(time%1)));
+        		if (min.length()==1) {
+        			min = "0"+min;
+        		}
+        		if (hr.length()==1) {
+        			hr = "0"+hr;
+        		}
+        		return ""+hr+":"+min+ampm;
+    		}
+    		String ampm = " AM";
+    		Double time = player.getWorld().getTime() / 1000.0;
+    		Double time2 = time;
+    		if (time2>18) { time2-=24; }
+    		time2+=6;
+    		if (time2.intValue()>13) {
+    			time2-=12;
+    			ampm = " PM";
+    		}
+    		else if(time2>12) {
+    			ampm = " PM";
+    		}
+    		else if (time2 < 1) {
+    			time2+=12;
+    		}
+    		String hr = ""+(time2.intValue());
+    		String min = ""+((int) (60*(time%1)));
+    		if (min.length()==1) {
+    			min = "0"+min;
+    		}
+    		if (hr.length()==1) {
+    			hr = "0"+hr;
+    		}
+    		return ""+hr+":"+min+ampm;
+		} });
+    	addPlaceholder(new Placeholder("replace") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		return modifiers[0].replace(modifiers[1], modifiers[2]);
+		} });
+    	addPlaceholder(new Placeholder("config") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		return getConfig().getString(modifiers[0]);
+		} });
+    	addPlaceholder(new Placeholder("structures") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+        		Location loc = getloc(modifiers[0], player);
+        		return loc.getWorld().canGenerateStructures()+"";
+    		}
+    		return ""+player.getWorld().canGenerateStructures();
+		} });
+    	addPlaceholder(new Placeholder("autosave") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			Location loc = getloc(modifiers[0], player);
+        		return loc.getWorld().isAutoSave()+"";
+    		}
+    		return ""+player.getWorld().isAutoSave();
+		} });
+    	addPlaceholder(new Placeholder("time") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			
+    		}
+			return ""+player.getWalkSpeed();
+		} });
+    	addPlaceholder(new Placeholder("animals") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+        		Location loc = getloc(modifiers[0], player);
+        		return loc.getWorld().getAllowAnimals()+"";
+    		}
+    		return ""+player.getWorld().getAllowAnimals();
+		} });
+    	addPlaceholder(new Placeholder("monsters") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+        		Location loc = getloc(modifiers[0], player);
+        		return loc.getWorld().getAllowMonsters()+"";
+    		}
+    		return ""+player.getWorld().getAllowMonsters();
+		} });
+    	addPlaceholder(new Placeholder("online") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+        		Location loc = getloc(modifiers[0], player);
+        		String online = "";
+        		for (Player user:Bukkit.getServer().getOnlinePlayers()) {
+          			online+=user.getName()+",";
+          		}
+        		return online.substring(0,online.length()-1);
+    		}
+    		String online = "";
+      		for (Player qwert:Bukkit.getServer().getOnlinePlayers()) {
+      			online+=qwert.getName()+",";
+      		}
+    		return online.substring(0,online.length()-1);
+		} });
+    	addPlaceholder(new Placeholder("colors") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		return "&1,&2,&3,&4,&5,&6,&7,&8,&9,&0,&a,&b,&c,&d,&e,&f,&r,&l,&m,&n,&o,&k";
+		} });
+    	addPlaceholder(new Placeholder("difficulty") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+        		Location loc = getloc(modifiers[0], player);
+        		return loc.getWorld().getDifficulty().toString();
+    		}
+    		return ""+player.getWorld().getDifficulty().name();
+		} });
+    	addPlaceholder(new Placeholder("weatherduration") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+        		Location loc = getloc(modifiers[0], player);
+        		return ""+loc.getWorld().getWeatherDuration();
+    		}
+    		return ""+player.getWorld().getWeatherDuration();
+		} });
+    	addPlaceholder(new Placeholder("environment") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+        		Location loc = getloc(modifiers[0], player);
+        		return loc.getWorld().getEnvironment().toString();
+    		}
+    		return ""+player.getWorld().getEnvironment().name();
+		} });
+    	addPlaceholder(new Placeholder("player") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (player==null) {
+    			return "CONSOLE";
+    		}
+    		else {
+    			return player.getName();
+    		}
+		} });
+    	addPlaceholder(new Placeholder("gvar") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		return StringUtils.join(globals.keySet(),",").replace("{","").replace("}", "");
+		} });
+    	addPlaceholder(new Placeholder("sender") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		Player sender = getSender();
+    		if (sender==null) {
+    			return "CONSOLE";
+    		}
+    		else {
+    			return sender.getName();
+    		}
+		} });
+    	addPlaceholder(new Placeholder("elevated") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		return ""+elevation;
+		} });
+    	addPlaceholder(new Placeholder("gamerules") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+        		Location loc = getloc(modifiers[0], player);
+        		return StringUtils.join(loc.getWorld().getGameRules(),",");
+    		}
+    		return StringUtils.join(player.getWorld().getGameRules(),",");
+		} });
+    	addPlaceholder(new Placeholder("seed") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+        		Location loc = getloc(modifiers[0], player);
+        		return ""+loc.getWorld().getSeed();
+    		}
+    		return ""+player.getWorld().getSeed();
+		} });
+    	addPlaceholder(new Placeholder("spawn") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			Location loc = getloc(modifiers[0], player);
+        		return loc.getWorld().getName()+","+loc.getWorld().getSpawnLocation().getX()+","+loc.getWorld().getSpawnLocation().getY()+","+loc.getWorld().getSpawnLocation().getZ();
+    		}
+    		return location.getWorld().getName()+","+location.getWorld().getSpawnLocation().getX()+","+location.getWorld().getSpawnLocation().getY()+","+location.getWorld().getSpawnLocation().getZ();
+		} });
+    	addPlaceholder(new Placeholder("difficulty") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			
+    		}
+			return ""+player.getWalkSpeed();
+		} });
+    	addPlaceholder(new Placeholder("count") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers[0].contains(",")) {
+    			int count = 0;
+    			String[] mylist = modifiers[0].split(",");
+    			for (String mynum:mylist) {
+    				if (mynum.equals(modifiers[1])) {
+    					count+=1;
+    				}
+    			}
+    			return ""+count;
+    		}
+    		else {
+    			return ""+StringUtils.countMatches(modifiers[0],modifiers[1]);
+    		}
+		} });
+    	addPlaceholder(new Placeholder("epoch") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		return Long.toString(System.currentTimeMillis()/1000);
+		} });
+    	addPlaceholder(new Placeholder("js") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		return javascript(StringUtils.join(modifiers,":"));
+		} });
+    	addPlaceholder(new Placeholder("javascript") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		return javascript(StringUtils.join(modifiers,":"));
+		} });
+    	addPlaceholder(new Placeholder("epochmilli") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		return Long.toString(System.currentTimeMillis());
+		} });
+    	addPlaceholder(new Placeholder("epochnano") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		return Long.toString(System.nanoTime());
+		} });
+    	addPlaceholder(new Placeholder("motd") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		return ""+Bukkit.getMotd();
+		} });
+    	addPlaceholder(new Placeholder("banlist") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		String mylist = "";
+      		for (OfflinePlayer clist:Bukkit.getBannedPlayers()) {
+      			mylist+=clist.getName()+",";
+      		}
+    		return mylist.substring(0,mylist.length()-1);
+		} });
+    	addPlaceholder(new Placeholder("playerlist") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+			List<String> names = new ArrayList<String>();
+            File playersFolder = new File("world" + File.separator + "players");
+            String[] dat = playersFolder.list(new FilenameFilter() {
+            	public boolean accept(File f, String s) {
+                    return s.endsWith(".dat");
+                }
+            });
+            for (String current : dat) {
+                names.add(current.replaceAll(".dat$", ""));
+            }
+            return StringUtils.join(names,",");
+		} });
+    	addPlaceholder(new Placeholder("baniplist") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		String mylist = "";
+      		for (String clist:Bukkit.getIPBans()) {
+      			mylist+=clist+",";
+      		}
+    		return mylist.substring(0,mylist.length()-1);
+		} });
+    	addPlaceholder(new Placeholder("worlds") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		String mylist = "";
+      		for (World clist:getServer().getWorlds()) {
+      			mylist+=clist.getName()+",";
+      		}
+    		return mylist.substring(0,mylist.length()-1);
+		} });
+    	addPlaceholder(new Placeholder("slots") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		return ""+Bukkit.getMaxPlayers();
+		} });
+    	addPlaceholder(new Placeholder("port") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		return ""+Bukkit.getPort();
+		} });
+    	addPlaceholder(new Placeholder("version") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		return Bukkit.getVersion().split(" ")[0];
+		} });
+    	addPlaceholder(new Placeholder("allowflight") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		return ""+Bukkit.getAllowFlight();
+		} });
+    	addPlaceholder(new Placeholder("viewdistance") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		return ""+Bukkit.getViewDistance();
+		} });
+    	addPlaceholder(new Placeholder("defaultgamemode") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		return ""+Bukkit.getDefaultGameMode();
+		} });
+    	addPlaceholder(new Placeholder("operators") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		String mylist = "";
+      		for (OfflinePlayer clist:Bukkit.getOperators()) {
+      			mylist+=clist.getName()+",";
+      		}
+    		return mylist.substring(0,mylist.length()-1);
+		} });
+    	addPlaceholder(new Placeholder("whitelist") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		Set<OfflinePlayer> mylist = Bukkit.getWhitelistedPlayers();
+    		String mystr = "";
+    		Iterator<OfflinePlayer> it = mylist.iterator();
+    		for (int i=0;i<mylist.size();i++) {
+    			if (i==0) {
+    				mystr+=it.next().getName();
+    			}
+    			else {
+    				mystr+=","+it.next().getName();
+    			}
+    		}
+    		return mystr;
+		} });
+    	addPlaceholder(new Placeholder("plugins") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		Plugin[] myplugins = getServer().getPluginManager().getPlugins();
+    		String mystr = "";
+    		for (int i=0;i<myplugins.length;i++) {
+    			if (i==0) {
+    				mystr+=myplugins[i].getName();
+    			}
+    			else {
+    				mystr+=","+myplugins[i].getName();
+    			}
+    		}
+    		return mystr;
+		} });
+    	addPlaceholder(new Placeholder("exhaustion") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			if (Bukkit.getPlayer(modifiers[0])==null) {
+    	    		try {
+    	    			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(modifiers[0]);
+    	    			return ""+offlineplayer.getExhaustion();
+    	        		}
+    	        		catch (Exception e) {
+    	        			IOP_1_7_2 offlineplayer = new IOP_1_7_2(modifiers[0]);
+    	        			return ""+offlineplayer.getExhaustion();
+    	        		}
+    			}
+				return ""+Bukkit.getPlayer(modifiers[0]).getExhaustion();
+    		}
+			return ""+player.getExhaustion();
+		} });
+    	addPlaceholder(new Placeholder("display") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			if (Bukkit.getPlayer(modifiers[0])==null) {
+    	    		try {
+    	    			String nick = (new EssentialsFeature()).displayName(modifiers[0]);
+    	    			if (nick.equals("")) {
+    	    				return modifiers[0];
+    	    			}
+    	    			return nick;
+    	    		}
+    	    		catch (Exception e) {
+    	    			return modifiers[0];
+    	    		}
+    			}
+    			return ""+Bukkit.getPlayer(modifiers[0]).getDisplayName();
+    		}
+			return ""+player.getDisplayName();
+		} });
+    	addPlaceholder(new Placeholder("firstjoin") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		return Long.toString(Bukkit.getOfflinePlayer(modifiers[0]).getFirstPlayed()/1000);		
+		} });
+    	addPlaceholder(new Placeholder("lastplayed") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (Bukkit.getPlayer(modifiers[0])!=null) {
+    			return "0";
+    		}
+    		return Long.toString(Bukkit.getOfflinePlayer(modifiers[0]).getLastPlayed()/1000);
+		} });
+    	addPlaceholder(new Placeholder("hunger") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			if (Bukkit.getPlayer(modifiers[0])==null) {
+    	    		try {
+    	    			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(modifiers[0]);
+    	    			return ""+offlineplayer.getFoodLevel();
+    	        		}
+    	        		catch (Exception e) {
+    	        			IOP_1_7_2 offlineplayer = new IOP_1_7_2(modifiers[0]);
+    	        			return ""+offlineplayer.getFoodLevel();
+    	        		}
+    			}
+    			return ""+Bukkit.getPlayer(modifiers[0]).getFoodLevel();
+    		}
+			return ""+player.getFoodLevel();
+		} });
+    	addPlaceholder(new Placeholder("air") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			if (Bukkit.getPlayer(modifiers[0])==null) {
+    	    		try {
+    	    			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(modifiers[0]);
+    	    			return ""+offlineplayer.getRemainingAir();
+    	        		}
+    	        		catch (Exception e) {
+    	        			IOP_1_7_2 offlineplayer = new IOP_1_7_2(modifiers[0]);
+    	        			return ""+offlineplayer.getRemainingAir();
+    	        		}
+    			}
+    			return ""+Bukkit.getPlayer(modifiers[0]).getRemainingAir();
+    		}
+			return ""+player.getRemainingAir();
+		} });
+    	addPlaceholder(new Placeholder("bed") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			if (Bukkit.getPlayer(modifiers[0])==null) {
+    	    		try {
+    	    			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(modifiers[0]);
+    	    			return ""+offlineplayer.getBedSpawnLocation().getX()+","+offlineplayer.getBedSpawnLocation().getY()+","+offlineplayer.getBedSpawnLocation().getZ();
+    	        		}
+    	        		catch (Exception e) {
+    	        			IOP_1_7_2 offlineplayer = new IOP_1_7_2(modifiers[0]);
+    	        			return ""+offlineplayer.getBedSpawnLocation().getX()+","+offlineplayer.getBedSpawnLocation().getY()+","+offlineplayer.getBedSpawnLocation().getZ();
+    	        		}
+    			}
+    			player = Bukkit.getPlayer(modifiers[0]);
+    			return ""+player.getBedSpawnLocation().getX()+","+player.getBedSpawnLocation().getY()+","+player.getBedSpawnLocation().getZ();
+    		}
+    		return ""+player.getBedSpawnLocation().getX()+","+player.getBedSpawnLocation().getY()+","+player.getBedSpawnLocation().getZ();
+		} });
+    	addPlaceholder(new Placeholder("exp") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			if (Bukkit.getPlayer(modifiers[0])==null) {
+    	    		try {
+    	    			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(modifiers[0]);
+    	    			return ""+offlineplayer.getTotalExperience();
+    	        		}
+    	        		catch (Exception e) {
+    	        			IOP_1_7_2 offlineplayer = new IOP_1_7_2(modifiers[0]);
+    	        			return ""+offlineplayer.getTotalExperience();
+    	        		}
+    			}
+    			ExperienceManager expMan = new ExperienceManager(Bukkit.getPlayer(modifiers[0]));
+    			return ""+expMan.getCurrentExp();
+    		}
+			ExperienceManager expMan = new ExperienceManager(player);
+			return ""+expMan.getCurrentExp();
+		} });
+    	addPlaceholder(new Placeholder("lvl") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			if (Bukkit.getPlayer(modifiers[0])==null) {
+    	    		try {
+    	    			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(modifiers[0]);
+    	    			ExperienceManager expMan = new ExperienceManager(player);
+    	    			return ""+expMan.getLevelForExp((int) Math.floor(offlineplayer.getTotalExperience()));
+    	        		}
+    	        		catch (Exception e) {
+    	        			IOP_1_7_2 offlineplayer = new IOP_1_7_2(modifiers[0]);
+    	        			ExperienceManager expMan = new ExperienceManager(player);
+    	        			return ""+expMan.getLevelForExp((int) Math.floor(offlineplayer.getTotalExperience()));
+    	        		}
+    			}
+    			ExperienceManager expMan = new ExperienceManager(Bukkit.getPlayer(modifiers[0]));
+    			return ""+expMan.getLevelForExp(expMan.getCurrentExp());
+    		}
+			ExperienceManager expMan = new ExperienceManager(player);
+			return ""+expMan.getLevelForExp(expMan.getCurrentExp());
+		} });
+    	addPlaceholder(new Placeholder("money") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			return ""+econ.getBalance(modifiers[0]);
+    		}
+    		return ""+econ.getBalance(player.getName());
+		} });
+    	addPlaceholder(new Placeholder("group") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			if (Bukkit.getPlayer(modifiers[0])==null) {
+    	    		try {
+    	    			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(modifiers[0]);
+    	    			return ""+perms.getPrimaryGroup(offlineplayer.getLocation().getWorld(), modifiers[0]);
+    	    		}
+    	        		catch (Exception e) {
+    	        			IOP_1_7_2 offlineplayer = new IOP_1_7_2(modifiers[0]);
+    	        			return ""+perms.getPrimaryGroup(offlineplayer.getLocation().getWorld(), modifiers[0]);
+    	        		}
+    			}
+    			return ""+perms.getPrimaryGroup(Bukkit.getPlayer(modifiers[0]));
+    		}
+    		return ""+perms.getPrimaryGroup(player);
+		} });
+    	addPlaceholder(new Placeholder("operator") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			return ""+Bukkit.getOfflinePlayer(modifiers[0]).isOp();
+    		}
+			return ""+player.isOp();
+		} });
+    	addPlaceholder(new Placeholder("itemid") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			if (Bukkit.getPlayer(modifiers[0])==null) {
+    	    		try {
+    	    			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(modifiers[0]);
+    	    			return ""+offlineplayer.getItemInHand();
+    	        		}
+    	        		catch (Exception e) {
+    	        			IOP_1_7_2 offlineplayer = new IOP_1_7_2(modifiers[0]);
+    	        			return ""+offlineplayer.getItemInHand();
+    	        		}
+    			}
+    			return ""+Bukkit.getPlayer(modifiers[0]).getItemInHand();
+    		}
+			return ""+player.getItemInHand();
+		} });
+    	addPlaceholder(new Placeholder("itemamount") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			if (Bukkit.getPlayer(modifiers[0])==null) {
+    	    		try {
+    	    			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(modifiers[0]);
+    	    			return ""+offlineplayer.getInventory().getItemInHand().getAmount();
+    	        		}
+    	        		catch (Exception e) {
+    	        			IOP_1_7_2 offlineplayer = new IOP_1_7_2(modifiers[0]);
+    	        			return ""+offlineplayer.getInventory().getItemInHand().getAmount();
+    	        		}
+    			}
+    			return ""+Bukkit.getPlayer(modifiers[0]).getItemInHand().getAmount();
+    		}
+			return ""+player.getItemInHand().getAmount();
+		} });
+    	addPlaceholder(new Placeholder("itemname") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			if (Bukkit.getPlayer(modifiers[0])==null) {
+    	    		try {
+    	    			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(modifiers[0]);
+    	    			return ""+offlineplayer.getInventory().getItemInHand().getType().toString();
+    	        		}
+    	        		catch (Exception e) {
+    	        			IOP_1_7_2 offlineplayer = new IOP_1_7_2(modifiers[0]);
+    	        			return ""+offlineplayer.getInventory().getItemInHand().getType().toString();
+    	        		}
+    			}
+    			return ""+Bukkit.getPlayer(modifiers[0]).getItemInHand().getType().toString();
+    		}
+			return ""+player.getItemInHand().getType().toString();
+		} });
+    	addPlaceholder(new Placeholder("durability") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			if (Bukkit.getPlayer(modifiers[0])==null) {
+    	    		try {
+    	    			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(modifiers[0]);
+    	    			return ""+offlineplayer.getInventory().getItemInHand().getDurability();
+    	        		}
+    	        		catch (Exception e) {
+    	        			IOP_1_7_2 offlineplayer = new IOP_1_7_2(modifiers[0]);
+    	        			return ""+offlineplayer.getInventory().getItemInHand().getDurability();
+    	        		}
+    			}
+    			return ""+Bukkit.getPlayer(modifiers[0]).getInventory().getItemInHand().getDurability();
+    		}
+			return ""+player.getInventory().getItemInHand().getDurability();
+		} });
+    	addPlaceholder(new Placeholder("gamemode") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			if (Bukkit.getPlayer(modifiers[0])==null) {
+    	    		try {
+    	    			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(modifiers[0]);
+    	    			return ""+offlineplayer.getGameMode().toString();
+    	        		}
+    	        		catch (Exception e) {
+    	        			IOP_1_7_2 offlineplayer = new IOP_1_7_2(modifiers[0]);
+    	        			return ""+offlineplayer.getGameMode().toString();
+    	        		}
+    			}
+    			return ""+Bukkit.getPlayer(modifiers[0]).getGameMode().toString();
+    		}
+			return ""+player.getGameMode().toString();
+		} });
+    	addPlaceholder(new Placeholder("direction") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			if (Bukkit.getPlayer(modifiers[0])==null) {
+    	    		try {
+    					ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(modifiers[0]);
+    					String tempstr = "null";
+    		            int degrees = (Math.round(offlineplayer.getLocation().getYaw()) + 270) % 360;
+    		            if (degrees <= 22)  {tempstr="WEST";}
+    		            else if (degrees <= 67) {tempstr="NORTHWEST";}
+    		            else if (degrees <= 112) {tempstr="NORTH";}
+    		            else if (degrees <= 157) {tempstr="NORTHEAST";}
+    		            else if (degrees <= 202) {tempstr="EAST";}
+    		            else if (degrees <= 247) {tempstr="SOUTHEAST";}
+    		            else if (degrees <= 292) {tempstr="SOUTH";}
+    		            else if (degrees <= 337) {tempstr="SOUTHWEST";}
+    		            else if (degrees <= 359) {tempstr="WEST";}
+    		            return tempstr;
+    	    		}
+    	    		catch (Exception e) {
+    	    			IOP_1_7_2 offlineplayer = new IOP_1_7_2(modifiers[0]);
+    	    			String tempstr = "null";
+    	                int degrees = (Math.round(offlineplayer.getLocation().getYaw()) + 270) % 360;
+    	                if (degrees <= 22)  {tempstr="WEST";}
+    	                else if (degrees <= 67) {tempstr="NORTHWEST";}
+    	                else if (degrees <= 112) {tempstr="NORTH";}
+    	                else if (degrees <= 157) {tempstr="NORTHEAST";}
+    	                else if (degrees <= 202) {tempstr="EAST";}
+    	                else if (degrees <= 247) {tempstr="SOUTHEAST";}
+    	                else if (degrees <= 292) {tempstr="SOUTH";}
+    	                else if (degrees <= 337) {tempstr="SOUTHWEST";}
+    	                else if (degrees <= 359) {tempstr="WEST";}
+    	                return tempstr;
+    	    		}
+    			}
+    			player = Bukkit.getPlayer(modifiers[0]);
+    			String tempstr = "null";
+    			int degrees = (Math.round(player.getLocation().getYaw()) + 270) % 360;
+                if (degrees <= 22)  {tempstr="WEST";}
+                else if (degrees <= 67) {tempstr="NORTHWEST";}
+                else if (degrees <= 112) {tempstr="NORTH";}
+                else if (degrees <= 157) {tempstr="NORTHEAST";}
+                else if (degrees <= 202) {tempstr="EAST";}
+                else if (degrees <= 247) {tempstr="SOUTHEAST";}
+                else if (degrees <= 292) {tempstr="SOUTH";}
+                else if (degrees <= 337) {tempstr="SOUTHWEST";}
+                else if (degrees <= 359) {tempstr="WEST";}
+                return tempstr;
+    		}
+    		String tempstr = "null";
+			int degrees = (Math.round(player.getLocation().getYaw()) + 270) % 360;
+            if (degrees <= 22)  {tempstr="WEST";}
+            else if (degrees <= 67) {tempstr="NORTHWEST";}
+            else if (degrees <= 112) {tempstr="NORTH";}
+            else if (degrees <= 157) {tempstr="NORTHEAST";}
+            else if (degrees <= 202) {tempstr="EAST";}
+            else if (degrees <= 247) {tempstr="SOUTHEAST";}
+            else if (degrees <= 292) {tempstr="SOUTH";}
+            else if (degrees <= 337) {tempstr="SOUTHWEST";}
+            else if (degrees <= 359) {tempstr="WEST";}
+            return tempstr;
+		} });
+    	addPlaceholder(new Placeholder("health") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			if (Bukkit.getPlayer(modifiers[0])==null) {
+    	    		try {
+    	    			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(modifiers[0]);
+    	    			return String.valueOf(offlineplayer.getHealthInt());
+    	        		}
+    	        		catch (Exception e) {
+    	        			IOP_1_7_2 offlineplayer = new IOP_1_7_2(modifiers[0]);
+    	        			return String.valueOf(offlineplayer.getHealthInt());
+    	        		}
+    			}
+    			return ""+Bukkit.getPlayer(modifiers[0]).getHealth();
+    		}
+			return ""+player.getHealth();
+		} });
+    	addPlaceholder(new Placeholder("biome") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			Location loc = getloc(modifiers[0], player);
+    			return loc.getWorld().getBiome(loc.getBlockX(), loc.getBlockZ()).toString();
+    		}
+    		return player.getWorld().getBiome(player.getLocation().getBlockX(), player.getLocation().getBlockZ()).toString();
+		} });
+    	addPlaceholder(new Placeholder("location") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			Location loc = getloc(modifiers[0], player);
+    			return loc.getWorld().getName()+","+loc.getBlockX()+","+loc.getBlockY()+","+loc.getBlockZ();
+    		}
+    		Location loc = player.getLocation();
+    		return loc.getWorld().getName()+","+loc.getBlockX()+","+loc.getBlockY()+","+loc.getBlockZ();
+		} });
+    	addPlaceholder(new Placeholder("storm") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			Location loc = getloc(modifiers[0], player);
+    			return ""+loc.getWorld().hasStorm();
+    		}
+    			return ""+player.getLocation().getWorld().hasStorm();
+		} });
+    	addPlaceholder(new Placeholder("thunder") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			Location loc = getloc(modifiers[0], player);
+    			return ""+loc.getWorld().isThundering();
+    		}
+    			return ""+player.getLocation().getWorld().isThundering();
+		} });
+    	addPlaceholder(new Placeholder("x") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+				return String.valueOf(Math.floor(getloc(modifiers[0], player).getX()));
+    		}
+			return String.valueOf(Math.floor(player.getLocation().getX()));
+		} });
+    	addPlaceholder(new Placeholder("y") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+				return String.valueOf(Math.floor(getloc(modifiers[0], player).getZ()));
+    		}
+			return String.valueOf(Math.floor(player.getLocation().getY()));
+		} });
+    	addPlaceholder(new Placeholder("z") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+				return String.valueOf(Math.floor(getloc(modifiers[0], player).getZ()));
+    		}
+			return String.valueOf(Math.floor(player.getLocation().getZ()));
+		} });
+    	addPlaceholder(new Placeholder("sneaking") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			return ""+Bukkit.getPlayer(modifiers[0]).isSneaking();
+    		}
+			return ""+player.isSneaking();
+		} });
+    	addPlaceholder(new Placeholder("itempickup") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			return ""+Bukkit.getPlayer(modifiers[0]).getCanPickupItems();
+    		}
+			return ""+player.getCanPickupItems();
+		} });
+    	addPlaceholder(new Placeholder("flying") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			return ""+Bukkit.getPlayer(modifiers[0]).getAllowFlight();
+    		}
+			return ""+player.getAllowFlight();
+		} });
+    	addPlaceholder(new Placeholder("grounded") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			if (Bukkit.getPlayer(modifiers[0])==null) {
+    				try {
+    	    			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(modifiers[0]);
+    	    			return ""+offlineplayer.getIsOnGround();
+    	        		}
+    	        		catch (Exception e) {
+    	        			IOP_1_7_2 offlineplayer = new IOP_1_7_2(modifiers[0]);
+    	        			return ""+offlineplayer.getIsOnGround();
+    	        		}
+    			}
+    			return ""+Bukkit.getPlayer(modifiers[0]).isOnGround();
+    		}
+			return ""+player.isOnGround();
+		} });
+    	addPlaceholder(new Placeholder("blocking") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			return ""+Bukkit.getPlayer(modifiers[0]).isBlocking();
+    		}
+			return ""+player.isBlocking();
+		} });
+    	addPlaceholder(new Placeholder("passenger") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			player =Bukkit.getPlayer(modifiers[0]);
+    			if (player.getVehicle()==null) {
+    				return "false";
+    			}
+    			return ""+player.getVehicle().toString();
+    		}
+			if (player.getVehicle()==null) {
+				return "false";
+			}
+			return ""+player.getVehicle().toString();
+		} });
+    	addPlaceholder(new Placeholder("maxhealth") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			return ""+Bukkit.getPlayer(modifiers[0]).getMaxHealth();
+    		}
+			return ""+player.getMaxHealth();
+		} });
+    	addPlaceholder(new Placeholder("maxair") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			return ""+Bukkit.getPlayer(modifiers[0]).getMaximumAir();
+    		}
+			return ""+player.getMaximumAir();
+		} });
+    	addPlaceholder(new Placeholder("age") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			return ""+(Bukkit.getPlayer(modifiers[0]).getTicksLived()/20);
+    		}
+    		return ""+(player.getTicksLived()/20);
+		} });
+    	addPlaceholder(new Placeholder("compass") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			player = Bukkit.getPlayer(modifiers[0]);
+    			return ""+player.getCompassTarget().getX()+","+player.getCompassTarget().getY()+","+player.getCompassTarget().getZ();
+    		}
+    		return ""+player.getCompassTarget().getX()+","+player.getCompassTarget().getY()+","+player.getCompassTarget().getZ();
+		} });
+    	addPlaceholder(new Placeholder("sleeping") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			if (Bukkit.getPlayer(modifiers[0])==null) {
+    				try {
+    	    			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(modifiers[0]);
+    	    			return ""+offlineplayer.getTotalExperience();
+    	        		}
+    	        		catch (Exception e) {
+    	        			IOP_1_7_2 offlineplayer = new IOP_1_7_2(modifiers[0]);
+    	        			return ""+offlineplayer.getIsSleeping();
+    	        		}
+    			}
+    			return ""+Bukkit.getPlayer(modifiers[0]).isSleeping();
+    		}
+			return ""+player.isSleeping();
+		} });
+    	addPlaceholder(new Placeholder("dead") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			return ""+Bukkit.getPlayer(modifiers[0]).isDead();
+    		}
+			return ""+player.isDead();
+		} });
+    	addPlaceholder(new Placeholder("whitelisted") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			if (Bukkit.getPlayer(modifiers[0])==null) {
+    				return ""+Bukkit.getOfflinePlayer(modifiers[0]).isWhitelisted();
+    			}
+    			return ""+Bukkit.getPlayer(modifiers[0]).isWhitelisted();
+    		}
+			return ""+player.isWhitelisted();
+		} });
+    	addPlaceholder(new Placeholder("world") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			return getloc(modifiers[0], player).getWorld().getName();
+    		}
+			return ""+player.getWorld().getName();
+		} });
+    	addPlaceholder(new Placeholder("whitelisted") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			if (Bukkit.getPlayer(modifiers[0])==null) {
+    				return ""+Bukkit.getOfflinePlayer(modifiers[0]).isWhitelisted();
+    			}
+    			return ""+Bukkit.getPlayer(modifiers[0]).isWhitelisted();
+    		}
+			return ""+player.isWhitelisted();
+		} });
+    	addPlaceholder(new Placeholder("ip") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			player = Bukkit.getPlayer(modifiers[0]);
+    			return player.getAddress().getAddress().toString().split("/")[(player.getAddress().toString().split("/").length)-1].split(":")[0];
+    		}
+			return ""+player.isWhitelisted();
+		} });
+    	addPlaceholder(new Placeholder("line1") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		Sign sign = (Sign) (location.getBlock().getState());
+    		String line = sign.getLine(0);
+    		if (line.equals("{line1}")) {
+    			return "";
+    		}
+    		if (line.contains("{line1}")) {
+    			return "";
+    		}
+    		if (modifiers.length==0) {
+    			return line;
+    		}
+    		return "";
+		} });
+    	addPlaceholder(new Placeholder("line2") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		Sign sign = (Sign) (location.getBlock().getState());
+    		String line = sign.getLine(1);
+    		if (line.equals("{line2}")) {
+    			return "";
+    		}
+    		if (line.contains("{line2}")) {
+    			return "";
+    		}
+    		if (modifiers.length==0) {
+    			return line;
+    		}
+    		return "";
+		} });
+    	addPlaceholder(new Placeholder("line3") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		Sign sign = (Sign) (location.getBlock().getState());
+    		String line = sign.getLine(2);
+    		if (line.equals("{line3}")) {
+    			return "";
+    		}
+    		if (line.contains("{line3}")) {
+    			return "";
+    		}
+    		if (modifiers.length==0) {
+    			return line;
+    		}
+    		return "";
+		} });
+    	addPlaceholder(new Placeholder("line4") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		Sign sign = (Sign) (location.getBlock().getState());
+    		String line = sign.getLine(3);
+    		if (line.equals("{line4}")) {
+    			return "";
+    		}
+    		if (line.contains("{line4}")) {
+    			return "";
+    		}
+    		if (modifiers.length==0) {
+    			return line;
+    		}
+    		return "";
+		} });
+    	addPlaceholder(new Placeholder("blockloc") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		return location.getWorld().getName()+","+location.getBlockX()+","+location.getBlockY()+","+location.getBlockZ();
+		} });
+    	addPlaceholder(new Placeholder("uses") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			int maxclicks = Integer.parseInt(modifiers[0]);
+    			for (int i = 0;i<list.size();i++) {
+	        		if (list.get(i).equals(location)&&players.get(i).equals(player.getName())) {
+	        			int myclicks = clicks.get(i);
+	        			if (myclicks > maxclicks) {
+	        				return ""+(myclicks%maxclicks);
+	        			}
+	        			else {
+	        				return ""+myclicks;
+	        			}
+	        		}
+	        	}
+    			return "0";
+    		}
+    		for (int i = 0;i<list.size();i++) {
+        		if (list.get(i).equals(location)&&players.get(i).equals(player.getName())) {
+        			return ""+clicks.get(i);
+        		}
+        	}
+			return "0";
+		} });
 	}
 	private boolean setupChat() {
         RegisteredServiceProvider<Chat> rsp = getServer().getServicesManager().getRegistration(Chat.class);
@@ -2507,6 +2690,63 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 	}
 		
 	};
+	@EventHandler
+	public void onSignChange(SignChangeEvent event) {
+		try {
+		String lines = StringUtils.join(event.getLines());
+		if (lines.length()<2) {
+			return;
+		}
+		if (lines.contains("{")==false) {
+			return;
+		}
+		if (lines.contains("}")==false) {
+			return;
+		}
+		List<String> tocheck = new ArrayList();
+		List<String> mylist= getConfig().getStringList("signs.autoupdate.whitelist");
+		for(String current:mylist){
+			if(lines.contains("{"+current+"}")) {
+				tocheck.add(current);
+			}
+			else if(lines.contains("{"+current+":")) {
+				tocheck.add(current);
+			}
+		}
+		Player player = event.getPlayer();
+		if (checkperm(player, "insignsplus.create.*")) {
+			return;
+		}
+		if (checkperm(player, "insignsplus.create.whitelisted")) {
+			return;
+		}
+		if (checkperm(player, "insignsplus.create")==false) {
+			msg(player,"&6Missing requirements&7: insignsplus.create");
+			event.setCancelled(true);
+			return;
+		}
+		boolean tocancel = false;
+		for(String current:tocheck) {
+			if (checkperm(player, "insignsplus.create."+current)) {
+				
+			}
+			else {
+				if (tocancel==false) {
+					msg(player,"&6Missing requirements&7:\n");
+				}
+				msg(player,"&7 - &7insignsplus.create."+current);
+				tocancel = true;
+			}
+		}
+		if (tocancel) {
+			event.setCancelled(true);
+			return;
+		}
+		}
+		catch (Exception e) {
+		}
+	}
+	
 	
 	public void updateSign(Player player,Location location) {
 		PacketContainer packet = protocolmanager.createPacket(PacketType.Play.Server.UPDATE_SIGN);
@@ -2534,7 +2774,6 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 	        			clicks.set(i, clicks.get(i)+1);
 	        		}
 	        	}
-	        	
 	        	if (isf==null) {
 	            	PacketContainer packet = protocolmanager.createPacket(PacketType.Play.Server.UPDATE_SIGN);
 	            	try {
@@ -2552,8 +2791,5 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 	            	}
 	        }
 		}
-    }
-    
-
-	
+    }	
 }
