@@ -78,9 +78,10 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 	InSignsPlus plugin;
 	private Object isf;
 	final Map<String, Placeholder> placeholders = new HashMap<String, Placeholder>();
-//	public List<Placeholder> placeholders;
+	final Map<String, Placeholder> defaultplaceholders = new HashMap<String, Placeholder>();
 	private Player currentplayer = null;
 	private Player currentsender = null;
+	
 	
 	public void setUser(Player player) {
 		currentplayer = player;
@@ -222,8 +223,6 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
         		line.replace("{arg"+(i+1)+"}", args[i]);
         	}
         }
-
-        
       	 int last = 0;
       	 boolean isnew = true;
       	 int q = 0;
@@ -455,6 +454,58 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     			player = (Player) sender;
     		}
     		if (args.length > 0) {
+    			if ((args[0].equalsIgnoreCase("list"))){
+    				msg (player,"&6Placeholders for '&cInSignsPlus&6'&7:");
+    				for (Placeholder current:getAllPlaceholders()) {
+    					if (placeholders.get(current.getKey())!=null) {
+    						msg(player,"&7 - &a{"+current+"}");
+    					}
+    					else {
+    						msg(player,"&7 - &c{"+current+"}");
+    					}
+    				}
+    				return true;
+    			}
+    			if ((args[0].equalsIgnoreCase("enable"))){
+    				if (checkperm(player,"insignsplus.enable")) {
+    					if (args.length>1) {
+    						boolean placeholder = addPlaceholder(args[1]);
+    						if (placeholder==false) {
+    							msg(player,"Invalid placeholder: /isp list");
+    							return false;
+    						}
+    						msg(player,"&7Enabled placeholder &c"+args[1]);
+    						return true;
+    					}
+    					else {
+    						msg(player,"/isp enablfe <key>");
+    					}
+    				}
+    				else {
+    					msg(player,"&7You lack the permission &cinsignsplus.enable");
+    				}
+    				return false;
+    			}
+    			if ((args[0].equalsIgnoreCase("disable"))){
+    				if (checkperm(player,"insignsplus.disable")) {
+    					if (args.length>1) {
+    						Placeholder placeholder = removePlaceholder(args[1]);
+    						if (placeholder==null) {
+    							msg(player,"Invalid placeholder: /isp list");
+    							return false;
+    						}
+    						msg(player,"&7Disabled placeholder &c"+args[1]);
+    						return true;
+    					}
+    					else {
+    						msg(player,"/isp disable <key>");
+    					}
+    				}
+    				else {
+    					msg(player,"&7You lack the permission &cinsignsplus.disable");
+    				}
+    				return false;
+    			}
     			if ((args[0].equalsIgnoreCase("reload"))){
     				failed = false;
     				if (checkperm(player,"insignsplus.reload")) {
@@ -986,6 +1037,9 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     public synchronized List<Placeholder> getPlaceholders() {
     	return new ArrayList<Placeholder>(placeholders.values());
     }
+    public synchronized List<Placeholder> getAllPlaceholders() {
+    	return new ArrayList<Placeholder>(defaultplaceholders.values());
+    }
     
     public synchronized Placeholder removePlaceholder (Placeholder placeholder) {
     	return placeholders.remove(placeholder.getKey());
@@ -994,7 +1048,17 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     	return placeholders.remove(key);
     }
     
+    public synchronized boolean addPlaceholder (String key) {
+    	Placeholder placeholder = defaultplaceholders.get(key);
+    	if (placeholder!=null) {
+    		placeholders.put(placeholder.getKey(), placeholder);
+    		return true;
+    	}
+		return false;
+    }
+    
     public synchronized void addPlaceholder (Placeholder placeholder) {
+		defaultplaceholders.put(placeholder.getKey(), placeholder);
     	placeholders.put(placeholder.getKey(), placeholder);
     }
     
@@ -1059,6 +1123,7 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 	            if ((list.contains(loc)&&players.contains(player.getName()))==false) {
 					boolean modified = false;
 					if (lines[0].equals("")==false) {
+						
 						String result = evaluate(lines[0], false,loc);
 						if (result.equals(lines[0])==false) {
 							lines[0] = colorise(result);
@@ -1135,13 +1200,13 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
         }
         getConfig().options().copyDefaults(true);
         final Map<String, Object> options = new HashMap<String, Object>();
-        getConfig().set("version", "0.7.1");
+        getConfig().set("version", "0.7.2");
         options.put("language","english");
         options.put("signs.autoupdate.enabled",true);
         options.put("signs.autoupdate.buffer",1000);
         options.put("signs.autoupdate.updates-per-milli",1);
         options.put("signs.autoupdate.interval",1);
-        List<String> whitelist = Arrays.asList("location","age","localtime","localtime12","display","uses","money","prefix","suffix","group","x","y","z","lvl","exhaustion","health","exp","hunger","air","maxhealth","maxair","gamemode","direction","biome","itemname","itemid","itemamount","durability","dead","sleeping","whitelisted","operator","sneaking","itempickup","flying","blocking","age","bed","compass","spawn","worldticks","time","time12","epoch","epochmilli","epochnano","online","worlds","banlist","baniplist","operators","whitelist","randchoice","rand","elevated","matchgroup","matchplayer","hasperm","js","config","passenger","lastplayed");
+        List<String> whitelist = Arrays.asList("grounded","location","age","localtime","localtime12","display","uses","money","prefix","suffix","group","x","y","z","lvl","exhaustion","health","exp","hunger","air","maxhealth","maxair","gamemode","direction","biome","itemname","itemid","itemamount","durability","dead","sleeping","whitelisted","operator","sneaking","itempickup","flying","blocking","age","bed","compass","spawn","worldticks","time","time12","epoch","epochmilli","epochnano","online","worlds","banlist","baniplist","operators","whitelist","randchoice","rand","elevated","matchgroup","matchplayer","hasperm","js","config","passenger","lastplayed");
         options.put("signs.autoupdate.whitelist",whitelist);
         List<String> example = Arrays.asList("return &4Hello!");
         options.put("scripting.placeholders.example",example);
@@ -1575,12 +1640,6 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     		}
     		return ""+player.getWorld().isAutoSave();
 		} });
-    	addPlaceholder(new Placeholder("time") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
-    		if (modifiers.length==1) {
-    			
-    		}
-			return ""+player.getWalkSpeed();
-		} });
     	addPlaceholder(new Placeholder("animals") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
         		Location loc = getloc(modifiers[0], player);
@@ -1677,12 +1736,6 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
         		return loc.getWorld().getName()+","+loc.getWorld().getSpawnLocation().getX()+","+loc.getWorld().getSpawnLocation().getY()+","+loc.getWorld().getSpawnLocation().getZ();
     		}
     		return location.getWorld().getName()+","+location.getWorld().getSpawnLocation().getX()+","+location.getWorld().getSpawnLocation().getY()+","+location.getWorld().getSpawnLocation().getZ();
-		} });
-    	addPlaceholder(new Placeholder("difficulty") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
-    		if (modifiers.length==1) {
-    			
-    		}
-			return ""+player.getWalkSpeed();
 		} });
     	addPlaceholder(new Placeholder("count") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers[0].contains(",")) {
@@ -2279,15 +2332,6 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     			return getloc(modifiers[0], player).getWorld().getName();
     		}
 			return ""+player.getWorld().getName();
-		} });
-    	addPlaceholder(new Placeholder("whitelisted") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
-    		if (modifiers.length==1) {
-    			if (Bukkit.getPlayer(modifiers[0])==null) {
-    				return ""+Bukkit.getOfflinePlayer(modifiers[0]).isWhitelisted();
-    			}
-    			return ""+Bukkit.getPlayer(modifiers[0]).isWhitelisted();
-    		}
-			return ""+player.isWhitelisted();
 		} });
     	addPlaceholder(new Placeholder("ip") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
