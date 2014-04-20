@@ -2,6 +2,7 @@ package com.empcraft;
 
 import java.io.File;
 import java.io.FilenameFilter;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -16,6 +17,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Map.Entry;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
@@ -30,6 +33,7 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
@@ -42,6 +46,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.plugin.Plugin;
@@ -55,6 +60,15 @@ import com.comphenix.protocol.events.ListenerPriority;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
+
+
+
+
+
+
+
+
+
 
 
 public final class InSignsPlus extends JavaPlugin implements Listener {
@@ -81,8 +95,14 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 	final Map<String, Placeholder> defaultplaceholders = new HashMap<String, Placeholder>();
 	private Player currentplayer = null;
 	private Player currentsender = null;
+	private String holoclicked = "false";
 	
-	
+	public synchronized void setClicked(String click) {
+		holoclicked = click;
+	}
+	public synchronized String getClicked() {
+		return holoclicked;
+	}
 	public void setUser(Player player) {
 		currentplayer = player;
 	}
@@ -455,16 +475,46 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     		}
     		if (args.length > 0) {
     			if ((args[0].equalsIgnoreCase("list"))){
-    				msg (player,"&6Placeholders for '&cInSignsPlus&6'&7:");
-    				for (Placeholder current:getAllPlaceholders()) {
-    					if (placeholders.get(current.getKey())!=null) {
-    						msg(player,"&7 - &a{"+current+"}");
+    				if (args.length > 1) {
+    					int page = 0;
+    					try {
+    						page = Integer.parseInt(args[1]);
+    						if (page<1) {
+    							page = 1;
+    						}
     					}
-    					else {
-    						msg(player,"&7 - &c{"+current+"}");
+    					catch (Exception e) {
+    						
     					}
+        				msg (player,"&6Placeholders for '&cISP&6'&7:");
+        				List<Placeholder> myph = getAllPlaceholders();
+        				for (int i = Math.min((page-1)*16, myph.size());i<Math.min((page)*16, myph.size());i++) {
+        					Placeholder current = myph.get(i);
+        					if (placeholders.get(current.getKey())!=null) {
+        						msg(player,"&7 - &a{"+current+"}");
+        					}
+        					else {
+        						msg(player,"&7 - &c{"+current+"}");
+        					}
+        				}
+        				msg(player,"&6Page &c"+(page)+"&6 of &c"+((int) Math.ceil(myph.size()/16)+1)+"&6.");
+        				return true;
     				}
-    				return true;
+    				else {
+        				msg (player,"&6Placeholders for '&cISP&6'&7:");
+        				List<Placeholder> myph = getAllPlaceholders();
+        				for (int i = 0;i<16;i++) {
+        					Placeholder current = myph.get(i);
+        					if (placeholders.get(current.getKey())!=null) {
+        						msg(player,"&7 - &a{"+current+"}");
+        					}
+        					else {
+        						msg(player,"&7 - &c{"+current+"}");
+        					}
+        				}
+        				msg(player,"&6Page &c1&6 of &c"+((int) Math.ceil(myph.size()/16)+1)+"&6.");
+        				return true;
+    				}
     			}
     			if ((args[0].equalsIgnoreCase("enable"))){
     				if (checkperm(player,"insignsplus.enable")) {
@@ -478,7 +528,7 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     						return true;
     					}
     					else {
-    						msg(player,"/isp enablfe <key>");
+    						msg(player,"/isp enable <key>");
     					}
     				}
     				else {
@@ -510,7 +560,7 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     				failed = false;
     				if (checkperm(player,"insignsplus.reload")) {
     					reloadConfig();
-    					getConfig().getConfigurationSection("signs").set("placeholders", null);
+    					getConfig().getConfigurationSection("scripting").set("placeholders", null);
     			        File f1 = new File(getDataFolder() + File.separator + "scripts");
     			        File[] mysigns = f1.listFiles();
     			        for (int i = 0; i < mysigns.length; i++) {
@@ -566,7 +616,7 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     			}
     		}
     		if (failed) {
-    			msg(player,"&7Commands:\n&7 - &a/isp reload\n&7 - &a/isp save");
+    			msg(player,"&7Commands:\n&7 - &a/isp reload\n&7 - &a/isp save\n&7 - &a/isp list\n&7 - &a/isp enable\n&7 - &a/isp disable");
     		}
     	}
     	return true;
@@ -737,7 +787,7 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 		}
 	}
 	public void onDisable() {
-			getConfig().getConfigurationSection("signs").set("placeholders", null);
+			getConfig().getConfigurationSection("scripting").set("placeholders", null);
 	    	try {
 	        	timer.cancel();
 	        	timer.purge();
@@ -895,14 +945,16 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
               else if (cmdargs[0].equalsIgnoreCase("endif")) {
             	  if (depth >0) {
             		  if (last==depth) {
-            			  last-=1;
-            		  }
-            		  depth-=1;
-            		  if (last==depth) {
             			  hasperm = true;
             			  if (user != null) {
             		  }
             		  }
+            		  if (last==depth) {
+            			  last-=1;
+            		  }
+            		  depth-=1;
+            	  }
+            	  else {
             	  }
               }
               else if (cmdargs[0].equalsIgnoreCase("gvar")) {
@@ -1037,6 +1089,9 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     public synchronized List<Placeholder> getPlaceholders() {
     	return new ArrayList<Placeholder>(placeholders.values());
     }
+    public synchronized List<String> getPlaceholderKeys() {
+    	return new ArrayList<String>(placeholders.keySet());
+    }
     public synchronized List<Placeholder> getAllPlaceholders() {
     	return new ArrayList<Placeholder>(defaultplaceholders.values());
     }
@@ -1067,6 +1122,8 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     }
 	@Override
 	public void onEnable(){
+		
+		
 		protocolmanager = ProtocolLibrary.getProtocolManager();
 		plugin = this;
         if (!setupEconomy() ) {
@@ -1161,6 +1218,14 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 			            		}
 			            		lines[i] = lines[i].substring(0,15);
 		            		}
+		            		else if (lines[i].contains("\\n")) {
+		            			if ((i < 3)) {
+		            				if (lines[i+1].isEmpty()) {
+		            					lines[i+1] = lines[i].substring(lines[i].indexOf("\\n")+2);
+		            				}
+		            			}
+		            			lines[i] = lines[i].substring(0,lines[i].indexOf("\\n")-1);
+		            		}
 		            	}
 						if(iswhitelisted(unmodified)) {
 							isadd(player, loc);
@@ -1180,7 +1245,7 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 	            	lines[1] = colorise(evaluate(lines[1], false,loc));
 	            	lines[2] = colorise(evaluate(lines[2], false,loc));
 	            	lines[3] = colorise(evaluate(lines[3], false,loc));
-	            	for (int i = 0; i < 4; i++) {
+					for (int i = 0; i < 4; i++) {
 	            		if (lines[i].length()>15) {
 		            		if ((i < 3)) {
 		            			if (lines[i+1].isEmpty()) {
@@ -1188,6 +1253,14 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 		            			}
 		            		}
 		            		lines[i] = lines[i].substring(0,15);
+	            		}
+	            		else if (lines[i].contains("\\n")) {
+	            			if ((i < 3)) {
+	            				if (lines[i+1].isEmpty()) {
+	            					lines[i+1] = lines[i].substring(lines[i].indexOf("\\n")+2);
+	            				}
+	            			}
+	            			lines[i] = lines[i].substring(0,lines[i].indexOf("\\n")-1);
 	            		}
 	            	}
 	            	packet.getStringArrays().write(0, lines);
@@ -1200,13 +1273,13 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
         }
         getConfig().options().copyDefaults(true);
         final Map<String, Object> options = new HashMap<String, Object>();
-        getConfig().set("version", "0.7.2");
+        getConfig().set("version", "0.7.4");
         options.put("language","english");
         options.put("signs.autoupdate.enabled",true);
         options.put("signs.autoupdate.buffer",1000);
         options.put("signs.autoupdate.updates-per-milli",1);
         options.put("signs.autoupdate.interval",1);
-        List<String> whitelist = Arrays.asList("grounded","location","age","localtime","localtime12","display","uses","money","prefix","suffix","group","x","y","z","lvl","exhaustion","health","exp","hunger","air","maxhealth","maxair","gamemode","direction","biome","itemname","itemid","itemamount","durability","dead","sleeping","whitelisted","operator","sneaking","itempickup","flying","blocking","age","bed","compass","spawn","worldticks","time","time12","epoch","epochmilli","epochnano","online","worlds","banlist","baniplist","operators","whitelist","randchoice","rand","elevated","matchgroup","matchplayer","hasperm","js","config","passenger","lastplayed");
+        List<String> whitelist = Arrays.asList("grounded","location","age","localtime","localtime12","display","uses","money","prefix","suffix","group","x","y","z","lvl","exhaustion","health","exp","hunger","air","maxhealth","maxair","gamemode","direction","biome","itemname","itemid","itemamount","durability","dead","sleeping","whitelisted","operator","sneaking","itempickup","flying","blocking","age","bed","compass","spawn","worldticks","time","date","time12","epoch","epochmilli","epochnano","online","worlds","banlist","baniplist","operators","whitelist","randchoice","rand","elevated","matchgroup","matchplayer","hasperm","js","config","passenger","lastplayed");
         options.put("signs.autoupdate.whitelist",whitelist);
         List<String> example = Arrays.asList("return &4Hello!");
         options.put("scripting.placeholders.example",example);
@@ -1535,6 +1608,16 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     			seconds = "0"+seconds;
     		}
     		return hours+":"+minutes+":"+seconds;
+		} });
+    	addPlaceholder(new Placeholder("date") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length == 0) {
+    			return (new SimpleDateFormat("yy\\M\\d")).format(new Date());
+    		}
+    		else {
+    			Date date = new Date(Integer.parseInt(modifiers[0]));
+    			return (new SimpleDateFormat("yy\\M\\d")).format(date);
+    			//todo convert timestamp to date.
+    		}
 		} });
     	addPlaceholder(new Placeholder("localtime12") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		String ampm = " AM";
@@ -2026,9 +2109,9 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     	        			return ""+offlineplayer.getItemInHand();
     	        		}
     			}
-    			return ""+Bukkit.getPlayer(modifiers[0]).getItemInHand();
+    			return ""+Bukkit.getPlayer(modifiers[0]).getItemInHand().getTypeId();
     		}
-			return ""+player.getItemInHand();
+			return ""+player.getItemInHand().getTypeId();
 		} });
     	addPlaceholder(new Placeholder("itemamount") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
@@ -2289,6 +2372,36 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     		}
     		return ""+(player.getTicksLived()/20);
 		} });
+    	addPlaceholder(new Placeholder("sound") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (getClicked().equals("false")==false) {
+	    		if (modifiers.length>0) {
+	    			Location loc = location;
+	    			int volume = 15;
+	    			int pitch = 0;
+	    			if (modifiers.length>1) {
+	    				volume = Integer.parseInt(modifiers[1]);
+	    				if (modifiers.length>2) {
+	        				pitch = Integer.parseInt(modifiers[2]);
+	        			}
+	    			}
+	    			if (loc==null) {
+	    				loc = player.getLocation();
+	    			}
+	    			for(Sound current:Sound.values()) {
+	    				if (current.name().toLowerCase().equalsIgnoreCase(modifiers[0].toLowerCase())) {
+	    					player.playSound(loc, current, volume, pitch);
+	    					return "";
+	    				}
+	    				else if (current.name().toLowerCase().equalsIgnoreCase(modifiers[0].toLowerCase().replace("\\.", "_"))) {
+	    					player.playSound(loc, current, volume, pitch);
+	    					return "";
+	    				}
+	    			}
+	    			player.playSound(loc, modifiers[0], volume, pitch);
+	    		}
+    		}
+    		return "";
+		} });
     	addPlaceholder(new Placeholder("compass") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
     			player = Bukkit.getPlayer(modifiers[0]);
@@ -2318,6 +2431,9 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     		}
 			return ""+player.isDead();
 		} });
+    	addPlaceholder(new Placeholder("isclick") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		return ""+getClicked();
+		} });
     	addPlaceholder(new Placeholder("whitelisted") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
     			if (Bukkit.getPlayer(modifiers[0])==null) {
@@ -2338,7 +2454,7 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
     			player = Bukkit.getPlayer(modifiers[0]);
     			return player.getAddress().getAddress().toString().split("/")[(player.getAddress().toString().split("/").length)-1].split(":")[0];
     		}
-			return ""+player.isWhitelisted();
+    		return player.getAddress().getAddress().toString().split("/")[(player.getAddress().toString().split("/").length)-1].split(":")[0];
 		} });
     	addPlaceholder(new Placeholder("line1") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		Sign sign = (Sign) (location.getBlock().getState());
@@ -2455,6 +2571,7 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 					            		packet.getSpecificModifier(Integer.TYPE).write(1, Integer.valueOf(sign.getY()));
 					            		packet.getSpecificModifier(Integer.TYPE).write(2, Integer.valueOf(sign.getZ()));
 					            		packet.getStringArrays().write(0, sign.getLines());
+					            		setClicked("false");
 					            		protocolmanager.sendServerPacket(player, packet);
 					            	}
 					            	catch (Exception e) {
@@ -2570,7 +2687,7 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 			return;
 		}
 		List<String> tocheck = new ArrayList();
-		List<String> mylist= getConfig().getStringList("signs.autoupdate.whitelist");
+		List<String> mylist = getPlaceholderKeys();
 		for(String current:mylist){
 			if(lines.contains("{"+current+"}")) {
 				tocheck.add(current);
@@ -2581,9 +2698,6 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 		}
 		Player player = event.getPlayer();
 		if (checkperm(player, "insignsplus.create.*")) {
-			return;
-		}
-		if (checkperm(player, "insignsplus.create.whitelisted")) {
 			return;
 		}
 		if (checkperm(player, "insignsplus.create")==false) {
@@ -2632,6 +2746,12 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 	@EventHandler
     private void onPlayerInteract(PlayerInteractEvent event)
     {
+		if (event.getAction().equals(Action.RIGHT_CLICK_BLOCK)) {
+			setClicked("true");
+		}
+		if (event.isCancelled()) {
+			return;
+		}
 		if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
 			Block block = event.getClickedBlock();
 	        if ((block.getType() == Material.SIGN_POST) || (block.getType() == Material.WALL_SIGN)) {
@@ -2641,9 +2761,13 @@ public final class InSignsPlus extends JavaPlugin implements Listener {
 	        		}
 	        	}
 	        	if (isf==null) {
-	            	PacketContainer packet = protocolmanager.createPacket(PacketType.Play.Server.UPDATE_SIGN);
 	            	try {
 	            		Sign sign = (Sign)block.getState();
+	            		if (sign==null) {
+	            			return;
+	            		}
+	            		sign.getLines();
+	            		PacketContainer packet = protocolmanager.createPacket(PacketType.Play.Server.UPDATE_SIGN);
 	                    Player player = event.getPlayer();
 	            		packet.getSpecificModifier(Integer.TYPE).write(0, Integer.valueOf(sign.getX()));
 	            		packet.getSpecificModifier(Integer.TYPE).write(1, Integer.valueOf(sign.getY()));

@@ -1,6 +1,6 @@
 name: InSignsPlus
 main: com.empcraft.InSignsPlus
-version: 0.7.2
+version: 0.7.4
 author: Empire92
 website: www.empcraft.com
 softdepend: [InSigns]
