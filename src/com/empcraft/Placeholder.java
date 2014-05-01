@@ -19,5 +19,9 @@ public abstract class Placeholder
   {
     return this.placeholder;
   }
+  public String getDescription()
+  {
+    return "There is currently no description";
+  }
   public abstract String getValue(Player player, Location location, String[] modifiers,Boolean elevation);
 }
