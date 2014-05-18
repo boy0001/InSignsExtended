@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import org.apache.commons.lang.StringUtils;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Server;
 import org.bukkit.block.Sign;
@@ -117,7 +118,7 @@ public class ProtocolClass {
 							if (lines[i].contains("\n")) {
 		            			if ((i < 3)) {
 		            				if (lines[i+1].isEmpty()) {
-		            					lines[i+1] = lines[i].substring(lines[i].indexOf("\n")+1);
+		            					lines[i+1] = ChatColor.getLastColors(lines[i].substring(0,15))+lines[i].substring(lines[i].indexOf("\n")+1);
 		            				}
 		            			}
 		            			lines[i] = lines[i].substring(0,lines[i].indexOf("\n"));
@@ -125,14 +126,14 @@ public class ProtocolClass {
 		            		if (lines[i].length()>15) {
 			            		if ((i < 3)) {
 			            			if (lines[i+1].isEmpty()) {
-			            				lines[i+1] = lines[i].substring(15);
+			            				lines[i+1] = ChatColor.getLastColors(lines[i].substring(0,15))+lines[i].substring(15);
 			            			}
 			            		}
 			            		lines[i] = lines[i].substring(0,15);
 		            		}
 		            	}
 						if(ISP.iswhitelisted(original)) {
-							ISP.isadd(player, loc);
+							ISP.add(player, loc);
 							packet.getStringArrays().write(0, lines);
 			    			event.setPacket(packet);
 						}
@@ -145,8 +146,6 @@ public class ProtocolClass {
 					}
 	            }
 	            else {
-	            	//TODO CHECK IF MODIFIED
-	            	//IF NOT, DON'T SEND PACKET
 	            	lines[0] = ISP.colorise(ISP.evaluate(lines[0], false,loc));
 	            	lines[1] = ISP.colorise(ISP.evaluate(lines[1], false,loc));
 	            	lines[2] = ISP.colorise(ISP.evaluate(lines[2], false,loc));
@@ -155,7 +154,7 @@ public class ProtocolClass {
 	            		if (lines[i].contains("\n")) {
 	            			if ((i < 3)) {
 	            				if (lines[i+1].isEmpty()) {
-	            					lines[i+1] = lines[i].substring(lines[i].indexOf("\n")+1);
+	            					lines[i+1] = ChatColor.getLastColors(lines[i].substring(0,15))+lines[i].substring(lines[i].indexOf("\n")+1);
 	            				}
 	            			}
 	            			lines[i] = lines[i].substring(0,lines[i].indexOf("\n"));
@@ -163,7 +162,7 @@ public class ProtocolClass {
 	            		if (lines[i].length()>15) {
 		            		if ((i < 3)) {
 		            			if (lines[i+1].isEmpty()) {
-		            				lines[i+1] = lines[i].substring(15);
+		            				lines[i+1] = ChatColor.getLastColors(lines[i].substring(0,15))+lines[i].substring(15);
 		            			}
 		            		}
 		            		lines[i] = lines[i].substring(0,15);

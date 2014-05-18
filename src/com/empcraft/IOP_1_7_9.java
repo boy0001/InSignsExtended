@@ -65,16 +65,28 @@ public class IOP_1_7_9 {
   private boolean exists = false;
   private boolean autosave = true;
   public IOP_1_7_9(String playername) {
+	try { 
+		playername = Bukkit.getOfflinePlayer(playername).getUniqueId().toString();
+		System.out.print("p2: "+playername);
+	} 
+	catch (Exception e) {
+			
+	}
     this.exists = loadPlayerData(playername);
   }
   public IOP_1_7_9(OfflinePlayer offlineplayer) {
-    this.exists = loadPlayerData(offlineplayer.getName());
+    try { this.exists = loadPlayerData(offlineplayer.getUniqueId().toString()); } catch (Exception e) {this.exists = loadPlayerData(offlineplayer.getName());}
   }
   private boolean loadPlayerData(String name) {
     try {
+    	System.out.print("PLAYER: "+name);
       this.player = name;
       for(World w : Bukkit.getWorlds()) {
-        this.file = new File(w.getWorldFolder(), "players" + File.separator + this.player + ".dat");
+        this.file = new File(w.getWorldFolder(), "playerdata" + File.separator + this.player + ".dat");
+        if (this.file.exists()==false) {
+        	System.out.print("false");
+        	this.file = new File(w.getWorldFolder(), "players" + File.separator + this.player + ".dat");
+        }
         if(this.file.exists()){
           this.compound = NBTCompressedStreamTools.a(new FileInputStream(this.file));
           this.player = this.file.getCanonicalFile().getName().replace(".dat", "");

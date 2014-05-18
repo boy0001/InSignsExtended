@@ -1,6 +1,6 @@
 name: InSignsPlus
 main: com.empcraft.InSignsPlus
-version: 0.7.9
+version: 0.7.10
 author: Empire92
 website: www.empcraft.com
 softdepend: [InSigns,IndividualMessages,ProtocolLib,Vault]
