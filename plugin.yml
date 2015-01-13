@@ -1,9 +1,9 @@
 name: InSignsPlus
 main: com.empcraft.InSignsPlus
-version: 0.7.10
+version: 2.0.0
 author: Empire92
 website: www.empcraft.com
-softdepend: [InSigns,IndividualMessages,ProtocolLib,Vault]
+softdepend: [InSigns,IndividualMessages,ProtocolLib,Vault,EnjinMinecraftPlugin,Essentials,ScoreboardStats,Paintball]
 depend: []
 commands:
    isp:

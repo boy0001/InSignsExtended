@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
@@ -19,14 +20,137 @@ import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Sound;
 import org.bukkit.World;
+import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
+import org.bukkit.event.block.Action;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
 
 public class DefaultPlaceholders {
+	public ItemStack getItem(String string) {
+		string = string.toLowerCase();
+		int id = 0;
+		int amount = 1;
+		short durability = 0;
+		String name = "";
+		ArrayList<Enchantment> enchantments = new ArrayList<Enchantment>();
+		ArrayList<Integer> enchantmentValues = new ArrayList<Integer>();
+		List<String> lore = null;
+		String[] mySplit = string.trim().split(" ");
+		for (String current:mySplit) {
+			try {
+				if (current.startsWith("id")) {
+					id = Integer.parseInt(current.split("=")[1].trim());
+				}
+				else if (current.startsWith("amount")) {
+					amount = Integer.parseInt(current.split("=")[1].trim());
+				}
+				else if (current.startsWith("damage")) {
+					durability = Short.parseShort(current.split("=")[1].trim());
+				}
+				else if (current.startsWith("durability")) {
+					durability= Short.parseShort(current.split("=")[1].trim());
+				}
+				else if (current.startsWith("lore")) {
+					lore = Arrays.asList(current.substring(5).split("\n"));
+				}
+				else if (current.startsWith("name")) {
+					name = current.substring(5);
+				}
+				else if (current.startsWith("enchantments")) {
+					String[] enchants = current.split("=")[1].trim().split(",");
+					for (String myenchant:enchants) {
+						String enchant = myenchant;
+						int value = 1;
+						if (myenchant.contains(",")) {
+							String[] mysplit = myenchant.split(",");
+							enchant = mysplit[0];
+							value = Integer.parseInt(mysplit[1]);
+						}
+						try {
+							enchantments.add(Enchantment.getById(Integer.parseInt(enchant.trim())));
+							enchantmentValues.add(value);
+						}
+						catch (Exception e) {
+							enchantments.add(Enchantment.getByName(enchant.toUpperCase()));
+							enchantmentValues.add(value);
+						}
+					}
+				}
+			}
+			catch (Exception e) {}
+		}
+		ItemStack item = new ItemStack(id, amount, durability);
+		ItemMeta meta = item.getItemMeta();
+		if (lore!=null) {
+			meta.setLore(lore);
+		}
+		if (name!="") {
+			meta.setDisplayName(name);
+		}
+		if (enchantments.size()>0) {
+			for (int i = 0; i < enchantments.size(); i++) {
+				item.addEnchantment(enchantments.get(i), enchantmentValues.get(i));
+			}
+		}
+		return item;
+	}
+	public Location getloc(String string,Player user) {
+		if (string.contains(",")==false) {
+			Player player = Bukkit.getPlayer(string);
+			if (player!=null) {
+				return player.getLocation();
+			}
+			else {
+				try { return new IOP_1_7_9(string).getLocation(); }
+				catch (Exception e1) {
+					try { return new ImprovedOfflinePlayer(string).getLocation(); }
+					catch (Exception e) {
+						try { return new IOP_1_7_2(string).getLocation(); }
+						catch (Exception e2) {
+						}
+					}
+				}
+				World world = Bukkit.getWorld(string);
+				if (world!=null) { return world.getSpawnLocation(); }
+			}
+		}
+		else {
+			String[] mysplit = string.split(",");
+			World world = Bukkit.getWorld(mysplit[0]);
+			if (world!=null) {
+				double x;double y;double z;
+				if (mysplit.length>=4) {
+					try { x = Double.parseDouble(mysplit[1]);} catch (Exception e) {x=world.getSpawnLocation().getX();}
+					try { y = Double.parseDouble(mysplit[2]);} catch (Exception e) {y=world.getSpawnLocation().getY();}
+					try { z = Double.parseDouble(mysplit[3]);} catch (Exception e) {z=world.getSpawnLocation().getZ();}
+					if (mysplit.length>4) {
+						float pitch = Float.parseFloat(mysplit[4]);
+						float yaw = Float.parseFloat(mysplit[5]);
+						return new Location(world, x, y, z, yaw, pitch);
+					}
+					return new Location(world, x, y, z);
+				}
+			}
+			else {
+				double x;double y;double z;
+				try { x = Double.parseDouble(mysplit[0]);} catch (Exception e) {x=world.getSpawnLocation().getX();}
+				try { y = Double.parseDouble(mysplit[1]);} catch (Exception e) {y=world.getSpawnLocation().getY();}
+				try { z = Double.parseDouble(mysplit[2]);} catch (Exception e) {z=world.getSpawnLocation().getZ();}
+				if (mysplit.length>3) {
+					float pitch = Float.parseFloat(mysplit[3]);
+					float yaw = Float.parseFloat(mysplit[4]);
+					return new Location(world, x, y, z, yaw, pitch);
+				}
+				return new Location(world, x, y, z);
+			}
+		}
+		return null;
+	}
 	DefaultPlaceholders(final InSignsPlus ISP) {
 		ISP.addPlaceholder(new Placeholder("u") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
@@ -108,7 +232,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{index:LIST:INDEX} - Returns the item at INDEX in a list";
+			return "{index:LIST:#} - Returns the item at INDEX in a list";
 		} });
     	ISP.addPlaceholder(new Placeholder("setindex") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		String[] mylist = modifiers[0].split(",");
@@ -126,7 +250,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{setindex:LIST:INDEX:VALUE} - Returns a new list with the item set at index";
+			return "{setindex:LIST:#:STRING} - Returns a new list with the item set at index";
 		} });
     	ISP.addPlaceholder(new Placeholder("delindex") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		String[] mylist = modifiers[0].split(",");
@@ -143,7 +267,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{delindex:LIST:INDEX:VALUE} - Returns the list with the item deleted at the index";
+			return "{delindex:LIST:#:STRING} - Returns the list with the item deleted at the index";
 		} });
     	ISP.addPlaceholder(new Placeholder("sublist") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		String[] mylist = modifiers[0].split(",");
@@ -176,7 +300,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{getindex:LIST:VALUE} - Returns the index for an item in the list";
+			return "{getindex:LIST:STRING} - Returns the index for an item in the list";
 		} });
     	ISP.addPlaceholder(new Placeholder("listhas") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		String[] mylist = modifiers[0].split(",");
@@ -189,7 +313,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{listhas:LIST:VALUE} - Returns true if a list contains a value";
+			return "{listhas:LIST:STRING} - Returns true if a list contains a STRING";
 		} });
     	ISP.addPlaceholder(new Placeholder("contains") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers[0].contains(modifiers[1])) {
@@ -202,7 +326,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{contains:STRING:VALUE} - Returns true if a string contains a value";
+			return "{contains:STRING:STRING2} - Returns true if STRING contains STRING2";
 		} });
     	ISP.addPlaceholder(new Placeholder("substring") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		return modifiers[0].substring(Integer.parseInt(modifiers[1]), Integer.parseInt(modifiers[2]));
@@ -223,7 +347,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{length:STRING} - Returns the length of the string";
+			return "{length:STRING} - Returns the length of STRING";
 		} });
     	ISP.addPlaceholder(new Placeholder("split") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		return modifiers[0].replace(modifiers[1],",");
@@ -256,7 +380,7 @@ public class DefaultPlaceholders {
 		} });
     	ISP.addPlaceholder(new Placeholder("worldtype") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
 			if (modifiers.length==1) {
-	    		Location loc = ISP.getloc(modifiers[0], player);
+	    		Location loc = getloc(modifiers[0], player);
 	    		return ""+loc.getWorld().getWorldType().getName();
 			}
 			else {
@@ -265,7 +389,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{worldtype:*location} - Returns the type of world at a location (e.g. FLAT, AMPLIFIED)";
+			return "{worldtype:*LOCATION} - Returns the type of world at a location (e.g. FLAT, AMPLIFIED)";
 		} });
     	ISP.addPlaceholder(new Placeholder("listreplace") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		String[] mylist = modifiers[0].split(",");
@@ -282,23 +406,23 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{listreplace:VALUE:VALUE2} - Returns a new list with occurrences of VALUE replaced with VALUE2";
+			return "{listreplace:STRING:STRING2} - Returns a new list with occurrences of STRING replaced with STRING2";
 		} });
 
     	ISP.addPlaceholder(new Placeholder("worldticks") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
 			if (modifiers.length==1) {
-				Location loc = ISP.getloc(modifiers[0], player);
+				Location loc = getloc(modifiers[0], player);
 	    		return Long.toString(loc.getWorld().getTime());
 			}
     		return Long.toString(player.getWorld().getTime());
 		}
     	@Override 
 		public String getDescription() {
-			return "{worldticks:*location} - Returns the time in ticks for a world";
+			return "{worldticks:*LOCATION} - Returns the time in ticks for a world";
 		} });
     	ISP.addPlaceholder(new Placeholder("time") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
-        		Location loc = ISP.getloc(modifiers[0], player);
+        		Location loc = getloc(modifiers[0], player);
         		Double time = loc.getWorld().getTime() / 1000.0;
         		Double time2 = time;
         		if (time2>18) { time2-=25; }
@@ -327,7 +451,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{time:*location} - The time (24hr) in a world";
+			return "{time:*LOCATION} - The time (24hr) in a world";
 		} });
     	ISP.addPlaceholder(new Placeholder("sectotime") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		String toreturn = "";
@@ -451,7 +575,7 @@ public class DefaultPlaceholders {
     	ISP.addPlaceholder(new Placeholder("time12") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
         		String ampm = " AM";
-        		Location loc = ISP.getloc(modifiers[0], player);
+        		Location loc = getloc(modifiers[0], player);
         		Double time = loc.getWorld().getTime() / 1000.0;
         		Double time2 = time;
         		if (time2>18) { time2-=24; }
@@ -503,14 +627,14 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{time12:*location} - The time (12hr) in a MC world";
+			return "{time12:*LOCATION} - The time (12hr) in a MC world";
 		} });
     	ISP.addPlaceholder(new Placeholder("replace") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		return modifiers[0].replace(modifiers[1], modifiers[2]);
 		}
     	@Override 
 		public String getDescription() {
-			return "{replace:VALUE:VALUE2} - Returns a new string with occurrences of VALUE replaced with VALUE2";
+			return "{replace:STRING:STRING2} - Returns a new string with occurrences of STRING replaced with STRIGN2";
 		} });
     	ISP.addPlaceholder(new Placeholder("config") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		return ISP.getConfig().getString(modifiers[0]);
@@ -521,51 +645,51 @@ public class DefaultPlaceholders {
 		} });
     	ISP.addPlaceholder(new Placeholder("structures") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
-        		Location loc = ISP.getloc(modifiers[0], player);
+        		Location loc = getloc(modifiers[0], player);
         		return loc.getWorld().canGenerateStructures()+"";
     		}
     		return ""+player.getWorld().canGenerateStructures();
 		}
     	@Override 
 		public String getDescription() {
-			return "{structures:*location} - Returns if structure generation is enabled for a world";
+			return "{structures:*LOCATION} - Returns if structure generation is enabled for a world";
 		} });
     	ISP.addPlaceholder(new Placeholder("autosave") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
-    			Location loc = ISP.getloc(modifiers[0], player);
+    			Location loc = getloc(modifiers[0], player);
         		return loc.getWorld().isAutoSave()+"";
     		}
     		return ""+player.getWorld().isAutoSave();
 		}
     	@Override 
 		public String getDescription() {
-			return "{autosave:*location} - Returns true if autosaving is enabled";
+			return "{autosave:*LOCATION} - Returns true if autosaving is enabled";
 		} });
     	ISP.addPlaceholder(new Placeholder("animals") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
-        		Location loc = ISP.getloc(modifiers[0], player);
+        		Location loc = getloc(modifiers[0], player);
         		return loc.getWorld().getAllowAnimals()+"";
     		}
     		return ""+player.getWorld().getAllowAnimals();
 		}
     	@Override 
 		public String getDescription() {
-			return "{animals:*location} - Returns true if animals are enabled";
+			return "{animals:*LOCATION} - Returns true if animals are enabled";
 		} });
     	ISP.addPlaceholder(new Placeholder("monsters") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
-        		Location loc = ISP.getloc(modifiers[0], player);
+        		Location loc = getloc(modifiers[0], player);
         		return loc.getWorld().getAllowMonsters()+"";
     		}
     		return ""+player.getWorld().getAllowMonsters();
 		}
     	@Override 
 		public String getDescription() {
-			return "{monsters:*location} - Returns true if monsters are enabled";
+			return "{monsters:*LOCATION} - Returns true if monsters are enabled";
 		} });
     	ISP.addPlaceholder(new Placeholder("online") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
-        		ISP.getloc(modifiers[0], player);
+        		getloc(modifiers[0], player);
         		String online = "";
         		for (Player user:Bukkit.getServer().getOnlinePlayers()) {
           			online+=user.getName()+",";
@@ -580,7 +704,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{online} - Returns the list of online players\n{online:*location} - Returns the list of players in a world";
+			return "{online} - Returns the list of online players\n{online:*LOCATION} - Returns the list of players in a world";
 		} });
     	ISP.addPlaceholder(new Placeholder("colors") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		return "&1,&2,&3,&4,&5,&6,&7,&8,&9,&0,&a,&b,&c,&d,&e,&f,&r,&l,&m,&n,&o,&k";
@@ -591,36 +715,36 @@ public class DefaultPlaceholders {
 		} });
     	ISP.addPlaceholder(new Placeholder("difficulty") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
-        		Location loc = ISP.getloc(modifiers[0], player);
+        		Location loc = getloc(modifiers[0], player);
         		return loc.getWorld().getDifficulty().toString();
     		}
     		return ""+player.getWorld().getDifficulty().name();
 		}
     	@Override 
 		public String getDescription() {
-			return "{difficulty:*location} - Returns the difficulty for a world";
+			return "{difficulty:*LOCATION} - Returns the difficulty for a world";
 		} });
     	ISP.addPlaceholder(new Placeholder("weatherduration") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
-        		Location loc = ISP.getloc(modifiers[0], player);
+        		Location loc = getloc(modifiers[0], player);
         		return ""+loc.getWorld().getWeatherDuration();
     		}
     		return ""+player.getWorld().getWeatherDuration();
 		}
     	@Override 
 		public String getDescription() {
-			return "{weatherduration:*location} - Returns the duration in ticks of the weather";
+			return "{weatherduration:*LOCATION} - Returns the duration in ticks of the weather";
 		} });
     	ISP.addPlaceholder(new Placeholder("environment") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
-        		Location loc = ISP.getloc(modifiers[0], player);
+        		Location loc = getloc(modifiers[0], player);
         		return loc.getWorld().getEnvironment().toString();
     		}
     		return ""+player.getWorld().getEnvironment().name();
 		}
     	@Override 
 		public String getDescription() {
-			return "{environment:*location} - Returns the environment at a location(e.g. NETHER, END)";
+			return "{environment:*LOCATION} - Returns the environment at a location(e.g. NETHER, END)";
 		} });
     	ISP.addPlaceholder(new Placeholder("player") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
@@ -666,7 +790,7 @@ public class DefaultPlaceholders {
 		} });
     	ISP.addPlaceholder(new Placeholder("gamerules") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
-        		Location loc = ISP.getloc(modifiers[0], player);
+        		Location loc = getloc(modifiers[0], player);
         		return StringUtils.join(loc.getWorld().getGameRules(),",");
     		}
     		return StringUtils.join(player.getWorld().getGameRules(),",");
@@ -677,25 +801,25 @@ public class DefaultPlaceholders {
 		} });
     	ISP.addPlaceholder(new Placeholder("seed") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
-        		Location loc = ISP.getloc(modifiers[0], player);
+        		Location loc = getloc(modifiers[0], player);
         		return ""+loc.getWorld().getSeed();
     		}
     		return ""+player.getWorld().getSeed();
 		}
     	@Override 
 		public String getDescription() {
-			return "{seed:*location} - Returns the seed for a world";
+			return "{seed:*LOCATION} - Returns the seed for a world";
 		} });
     	ISP.addPlaceholder(new Placeholder("spawn") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
-    			Location loc = ISP.getloc(modifiers[0], player);
+    			Location loc = getloc(modifiers[0], player);
         		return loc.getWorld().getName()+","+loc.getWorld().getSpawnLocation().getX()+","+loc.getWorld().getSpawnLocation().getY()+","+loc.getWorld().getSpawnLocation().getZ();
     		}
     		return location.getWorld().getName()+","+location.getWorld().getSpawnLocation().getX()+","+location.getWorld().getSpawnLocation().getY()+","+location.getWorld().getSpawnLocation().getZ();
 		}
     	@Override 
 		public String getDescription() {
-			return "{spawn:*location} - Returns the spawn location for a world";
+			return "{spawn:*LOCATION} - Returns the spawn location for a world";
 		} });
     	ISP.addPlaceholder(new Placeholder("count") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers[0].contains(",")) {
@@ -714,7 +838,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{count:LIST:VALUE} - Returns the number of times a value appears in a list";
+			return "{count:LIST:STRING} - Returns the number of times a value appears in a list";
 		} });
     	ISP.addPlaceholder(new Placeholder("epoch") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		return Long.toString(System.currentTimeMillis()/1000);
@@ -728,14 +852,14 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{js:SCRIPT} - Useful for basic math e.g. {js:1+1} but can do any javascript action\n{jsg:FILE.js} - Javascript files are located in the scripts folder for the plugin";
+			return "{js:SCRIPT} - Useful for basic math e.g. {js:1+1} but can do any javascript action\n{js:FILE.js} - Javascript files are located in the scripts folder for the plugin";
 		} });
     	ISP.addPlaceholder(new Placeholder("javascript") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		return ISP.javascript(StringUtils.join(modifiers,":"));
 		}
     	@Override 
 		public String getDescription() {
-			return "{javascript:SCRIPT} - Useful for basic math e.g. {javascript:1+1} but can do any javascript action\n{jsg:FILE.js} - Javascript files are located in the scripts folder for the plugin";
+			return "Please refer to {js}";
 		} });
     	ISP.addPlaceholder(new Placeholder("epochmilli") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		return Long.toString(System.currentTimeMillis());
@@ -788,7 +912,7 @@ public class DefaultPlaceholders {
 		} });
     	ISP.addPlaceholder(new Placeholder("playerlist") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
 			List<String> names = new ArrayList<String>();
-            File playersFolder = new File("world" + File.separator + "players");
+            File playersFolder = new File("world" + File.separator + "playerdata");
             String[] dat = playersFolder.list(new FilenameFilter() {
             	public boolean accept(File f, String s) {
                     return s.endsWith(".dat");
@@ -914,13 +1038,51 @@ public class DefaultPlaceholders {
 			return "{plugins} - Returns the list of plugins";
 		} });
     	ISP.addPlaceholder(new Placeholder("uuid") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
-    		if (modifiers.length==1) { return Bukkit.getOfflinePlayer(modifiers[0]).getUniqueId().toString(); }
-    		else { return player.getUniqueId().toString(); }
-    	}
-    	@Override 
-		public String getDescription() {
-			return "{uuid:*player} - Returns the UUID for the player";
-		} });
+            if (modifiers.length==1) { 
+                if (Bukkit.getPlayer(modifiers[0])!=null) {
+                    return Bukkit.getPlayer(modifiers[0]).getUniqueId().toString();
+                }
+                return Bukkit.getOfflinePlayer(modifiers[0]).getUniqueId().toString(); }
+            else { return player.getUniqueId().toString(); }
+        }
+        @Override 
+        public String getDescription() {
+            return "{uuid:*player} - Returns the UUID for the player";
+        } });
+    	ISP.addPlaceholder(new Placeholder("uuidf") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+            if (modifiers.length==1) { 
+                return Bukkit.getOfflinePlayer(modifiers[0]).getUniqueId().toString(); }
+            else { return player.getUniqueId().toString(); }
+        }
+        @Override 
+        public String getDescription() {
+            return "{uuid:*player} - Returns the UUID for the player";
+        } });
+    	ISP.addPlaceholder(new Placeholder("uuid2p") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    	    try {
+            if (modifiers.length==1) {
+                if (UUID.fromString(modifiers[0])!=null) {
+                    if (Bukkit.getPlayer(UUID.fromString(modifiers[0])) !=null) {
+                        return Bukkit.getPlayer(UUID.fromString(modifiers[0])).getName();
+                    }
+                    else if (Bukkit.getOfflinePlayer(UUID.fromString(modifiers[0])).hasPlayedBefore()) {
+                        System.out.print("OFFLINE");
+                        return Bukkit.getOfflinePlayer(UUID.fromString(modifiers[0])).getName();
+                    }
+                    return UUID.fromString(modifiers[0]).toString()+" w";
+                }
+                return "fail2 "+modifiers[0];
+    	    }
+    	    }
+    	    catch (Exception e) {
+    	        e.printStackTrace();
+    	    }
+    	    return "fail1";
+        }
+        @Override 
+        public String getDescription() {
+            return "{uuid:*player} - Returns the UUID for the player";
+        } });
     	ISP.addPlaceholder(new Placeholder("exhaustion") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
     			if (Bukkit.getPlayer(modifiers[0])==null) {
@@ -945,7 +1107,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{exhaustion:*username} - Returns the player's exhaustion";
+			return "{exhaustion:*USERNAME} - Returns the player's exhaustion";
 		} });
     	ISP.addPlaceholder(new Placeholder("display") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
@@ -967,14 +1129,17 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{display:*username} - Returns the player's nickname";
+			return "{display:*USERNAME} - Returns the player's nickname";
 		} });
     	ISP.addPlaceholder(new Placeholder("firstjoin") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==0) {
+    			return Long.toString(player.getFirstPlayed()/1000);
+    		}
     		return Long.toString(Bukkit.getOfflinePlayer(modifiers[0]).getFirstPlayed()/1000);		
 		}
     	@Override 
 		public String getDescription() {
-			return "{firstjoin:*username} - Returns the timestamp (seconds) for when the player joined";
+			return "{firstjoin:*USERNAME} - Returns the timestamp (seconds) for when the player joined";
 		} });
     	ISP.addPlaceholder(new Placeholder("lastplayed") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (Bukkit.getPlayer(modifiers[0])!=null) {
@@ -984,7 +1149,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{lastplayed:*username} - Returns the time since the player last played.";
+			return "{lastplayed:*USERNAME} - Returns the time since the player last played.";
 		} });
     	ISP.addPlaceholder(new Placeholder("hunger") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
@@ -1010,7 +1175,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{hunger:*username} - Returns a player's hunger";
+			return "{hunger:*USERNAME} - Returns a player's hunger";
 		} });
     	ISP.addPlaceholder(new Placeholder("air") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
@@ -1036,7 +1201,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{air:*username} - Returns a player's air";
+			return "{air:*USERNAME} - Returns a player's air";
 		} });
     	ISP.addPlaceholder(new Placeholder("bed") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
@@ -1063,7 +1228,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{bed:*username} - The location of a player's bed";
+			return "{bed:*USERNAME} - The location of a player's bed";
 		} });
     	ISP.addPlaceholder(new Placeholder("exp") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
@@ -1091,7 +1256,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{exp:*username} - Returns a player's experience";
+			return "{exp:*USERNAME} - Returns a player's experience";
 		} });
     	ISP.addPlaceholder(new Placeholder("lvl") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
@@ -1122,7 +1287,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{lvl:*username} - Returns a player's experience level";
+			return "{lvl:*USERNAME} - Returns a player's experience level";
 		} });
     	ISP.addPlaceholder(new Placeholder("operator") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
@@ -1132,7 +1297,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{operator:*username} - Returns true if the player is Op";
+			return "{operator:*USERNAME} - Returns true if the player is Op";
 		} });
     	ISP.addPlaceholder(new Placeholder("itemid") { @SuppressWarnings("deprecation")
 		@Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
@@ -1159,7 +1324,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{itemid:*username} - Returns the ID the player is holding";
+			return "{itemid:*USERNAME} - Returns the ID the player is holding";
 		} });
     	ISP.addPlaceholder(new Placeholder("itemamount") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
@@ -1185,7 +1350,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{itemamount:*username} - Returns the number of items a player is holding";
+			return "{itemamount:*USERNAME} - Returns the number of items a player is holding";
 		} });
     	ISP.addPlaceholder(new Placeholder("itemname") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
@@ -1211,7 +1376,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{itemname:*username} - Returns the name of the item a player is holding";
+			return "{itemname:*USERNAME} - Returns the name of the item a player is holding";
 		} });
     	ISP.addPlaceholder(new Placeholder("sound") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length>0) {
@@ -1253,16 +1418,16 @@ public class DefaultPlaceholders {
     			}
     			catch (Exception e) {
     				try {
-    	    			IOP_1_7_9 offlineplayer = new IOP_1_7_9(modifiers[0]);
+    	    			IOP_1_7_9 offlineplayer = new IOP_1_7_9(modifiers[2]);
     	    			inventory = offlineplayer.getInventory();
     	    		}
     	    		catch (Exception e1) {
     				try {
-    	    			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(modifiers[0]);
+    	    			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(modifiers[2]);
     	    			inventory = offlineplayer.getInventory();
 	        		}
 	        		catch (Exception e2) {
-	        			IOP_1_7_2 offlineplayer = new IOP_1_7_2(modifiers[0]);
+	        			IOP_1_7_2 offlineplayer = new IOP_1_7_2(modifiers[2]);
 	        			inventory = offlineplayer.getInventory();
 	        		}
     	    		}
@@ -1381,7 +1546,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{durability:*username} - Returns the item durability for what a player is holding";
+			return "{durability:*USERNAME} - Returns the item durability for what a player is holding";
 		} });
     	ISP.addPlaceholder(new Placeholder("gamemode") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
@@ -1407,7 +1572,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{gamemode:*username} - Returns the player's gamemode";
+			return "{gamemode:*USERNAME} - Returns the player's gamemode";
 		} });
     	ISP.addPlaceholder(new Placeholder("direction") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
@@ -1468,7 +1633,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{direction:*username} - Returns the player's facing direction";
+			return "{direction:*USERNAME} - Returns the player's facing direction";
 		} });
     	ISP.addPlaceholder(new Placeholder("health") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
@@ -1494,22 +1659,22 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{health:*username} - Returns the player's health";
+			return "{health:*USERNAME} - Returns the player's health";
 		} });
     	ISP.addPlaceholder(new Placeholder("biome") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
-    			Location loc = ISP.getloc(modifiers[0], player);
+    			Location loc = getloc(modifiers[0], player);
     			return loc.getWorld().getBiome(loc.getBlockX(), loc.getBlockZ()).toString();
     		}
     		return player.getWorld().getBiome(player.getLocation().getBlockX(), player.getLocation().getBlockZ()).toString();
 		}
     	@Override 
 		public String getDescription() {
-			return "{biome:*location} - Returns the biome at a location";
+			return "{biome:*LOCATION} - Returns the biome at a location";
 		} });
     	ISP.addPlaceholder(new Placeholder("location") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
-    			Location loc = ISP.getloc(modifiers[0], player);
+    			Location loc = getloc(modifiers[0], player);
     			return loc.getWorld().getName()+","+loc.getBlockX()+","+loc.getBlockY()+","+loc.getBlockZ();
     		}
     		Location loc = player.getLocation();
@@ -1517,33 +1682,33 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{location:*username} - Returns a player's location in the format W,X,Y,Z";
+			return "{location:*USERNAME} - Returns a player's location in the format W,X,Y,Z";
 		} });
     	ISP.addPlaceholder(new Placeholder("storm") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
-    			Location loc = ISP.getloc(modifiers[0], player);
+    			Location loc = getloc(modifiers[0], player);
     			return ""+loc.getWorld().hasStorm();
     		}
     			return ""+player.getLocation().getWorld().hasStorm();
 		}
     	@Override 
 		public String getDescription() {
-			return "{storm:*location} - Returns true if there is a storm at a location";
+			return "{storm:*LOCATION} - Returns true if there is a storm at a location";
 		} });
     	ISP.addPlaceholder(new Placeholder("thunder") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
-    			Location loc = ISP.getloc(modifiers[0], player);
+    			Location loc = getloc(modifiers[0], player);
     			return ""+loc.getWorld().isThundering();
     		}
     			return ""+player.getLocation().getWorld().isThundering();
 		}
     	@Override 
 		public String getDescription() {
-			return "{thunder:*location} - Returns true if there is thunder at a location";
+			return "{thunder:*LOCATION} - Returns true if there is thunder at a location";
 		} });
     	ISP.addPlaceholder(new Placeholder("x") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
-				return String.valueOf(Math.floor(ISP.getloc(modifiers[0], player).getX()));
+				return String.valueOf(Math.floor(getloc(modifiers[0], player).getX()));
     		}
 			return String.valueOf(Math.floor(player.getLocation().getX()));
 		}
@@ -1553,7 +1718,7 @@ public class DefaultPlaceholders {
 		} });
     	ISP.addPlaceholder(new Placeholder("y") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
-				return String.valueOf(Math.floor(ISP.getloc(modifiers[0], player).getZ()));
+				return String.valueOf(Math.floor(getloc(modifiers[0], player).getZ()));
     		}
 			return String.valueOf(Math.floor(player.getLocation().getY()));
 		}
@@ -1563,7 +1728,7 @@ public class DefaultPlaceholders {
 		} });
     	ISP.addPlaceholder(new Placeholder("z") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
-				return String.valueOf(Math.floor(ISP.getloc(modifiers[0], player).getZ()));
+				return String.valueOf(Math.floor(getloc(modifiers[0], player).getZ()));
     		}
 			return String.valueOf(Math.floor(player.getLocation().getZ()));
 		}
@@ -1589,7 +1754,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{itempickup:*username} - Returns true if a player can pick up items";
+			return "{itempickup:*USERNAME} - Returns true if a player can pick up items";
 		} });
     	ISP.addPlaceholder(new Placeholder("flying") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
@@ -1599,7 +1764,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{flying:*username} - Returns true if the player is flying";
+			return "{flying:*USERNAME} - Returns true if the player is flying";
 		} });
     	ISP.addPlaceholder(new Placeholder("grounded") { @SuppressWarnings("deprecation")
 		@Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
@@ -1626,7 +1791,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{grounded:*username} - Returns true if the player is on the ground";
+			return "{grounded:*USERNAME} - Returns true if the player is on the ground";
 		} });
     	ISP.addPlaceholder(new Placeholder("blocking") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
@@ -1636,7 +1801,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{blocking:*username} - Returns true if the player is blocking";
+			return "{blocking:*USERNAME} - Returns true if the player is blocking";
 		} });
     	ISP.addPlaceholder(new Placeholder("passenger") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
@@ -1653,7 +1818,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{passenger:*username} - Returns the vehicle the player is in or false";
+			return "{passenger:*USERNAME} - Returns the vehicle the player is in or false";
 		} });
     	ISP.addPlaceholder(new Placeholder("maxhealth") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
@@ -1663,7 +1828,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{maxhealth:*username} - Returns a player's max health";
+			return "{maxhealth:*USERNAME} - Returns a player's max health";
 		} });
     	ISP.addPlaceholder(new Placeholder("maxair") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
@@ -1673,7 +1838,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{maxair:*username} - Returns a player's max air";
+			return "{maxair:*USERNAME} - Returns a player's max air";
 		} });
     	ISP.addPlaceholder(new Placeholder("age") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
@@ -1683,7 +1848,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{age:*username} - Returns the time since the player joined in seconds.";
+			return "{age:*USERNAME} - Returns the time since the player joined in seconds.";
 		} });
     	ISP.addPlaceholder(new Placeholder("compass") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
@@ -1694,7 +1859,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{compass:*username} - The location a player's compass points";
+			return "{compass:*USERNAME} - The location a player's compass points";
 		} });
     	ISP.addPlaceholder(new Placeholder("sleeping") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
@@ -1720,7 +1885,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{sleeping:*username} - Returns true if player is using a bed";
+			return "{sleeping:*USERNAME} - Returns true if player is using a bed";
 		} });
     	ISP.addPlaceholder(new Placeholder("dead") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
@@ -1730,7 +1895,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{dead:*username} - Returns true/false if player is dead/alive";
+			return "{dead:*USERNAME} - Returns true/false if player is dead/alive";
 		} });
     	ISP.addPlaceholder(new Placeholder("whitelisted") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
@@ -1743,17 +1908,17 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{whitelisted:*username} - Return true if player is whitelisted";
+			return "{whitelisted:*USERNAME} - Return true if player is whitelisted";
 		} });
     	ISP.addPlaceholder(new Placeholder("world") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
-    			return ISP.getloc(modifiers[0], player).getWorld().getName();
+    			return getloc(modifiers[0], player).getWorld().getName();
     		}
 			return ""+player.getWorld().getName();
 		}
     	@Override 
 		public String getDescription() {
-			return "{world:*username} - Returns the name of the world";
+			return "{world:*USERNAME} - Returns the name of the world";
 		} });
     	ISP.addPlaceholder(new Placeholder("ip") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
@@ -1764,7 +1929,7 @@ public class DefaultPlaceholders {
 		}
     	@Override 
 		public String getDescription() {
-			return "{ip:*username} - Returns the player's IP address";
+			return "{ip:*USERNAME} - Returns the player's IP address";
 		} });
     	ISP.addPlaceholder(new Placeholder("wrap") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==2) {
@@ -1841,24 +2006,24 @@ public class DefaultPlaceholders {
     		return location.getWorld().getName()+","+location.getBlockX()+","+location.getBlockY()+","+location.getBlockZ();
 		} });
     	ISP.addPlaceholder(new Placeholder("uses") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
-    		if (modifiers.length==1) {
-    			int maxclicks = Integer.parseInt(modifiers[0]);
-    			for (int i = 0;i<ISP.list.size();i++) {
-	        		if (ISP.list.get(i).equals(location)&&ISP.players.get(i).equals(player.getName())) {
-	        			int myclicks = ISP.clicks.get(i);
-	        			if (myclicks > maxclicks) {
-	        				return ""+(myclicks%maxclicks);
-	        			}
-	        			else {
-	        				return ""+myclicks;
-	        			}
-	        		}
-	        	}
-    			return "0";
-    		}
-    		for (int i = 0;i<ISP.list.size();i++) {
-        		if (ISP.list.get(i).equals(location)&&ISP.players.get(i).equals(player.getName())) {
-        			return ""+ISP.clicks.get(i);
+			int maxclicks = Integer.parseInt(modifiers[0]);
+			SignPlus sp = new SignPlus(location, player);
+        	if (ISP.updateQueue.contains(sp)) {
+        		for (SignPlus current:ISP.updateQueue) {
+        			if (current.equals(sp)) {
+        				int myclicks = sp.getClicks();
+        				if (modifiers.length==1) {
+	        				if (myclicks > maxclicks) {
+		        				return ""+(myclicks%maxclicks);
+		        			}
+		        			else {
+		        				return ""+myclicks;
+		        			}
+        				}
+        				else {
+        					return ""+myclicks;
+        				}
+        			}
         		}
         	}
 			return "0";
@@ -1866,6 +2031,136 @@ public class DefaultPlaceholders {
     	@Override 
 		public String getDescription() {
 			return "{uses} - returns the number of times the sign has been used by a player";
+		} });
+    	if (!ISP.getConfig().getBoolean("scripting.advanced-placeholders")) { return; }
+    	// TODO ADVANCED PLACEHOLDERS
+    	ISP.addPlaceholder(new Placeholder("setinventory") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		PlayerInventory inventory;
+    		if (modifiers.length==3) {
+    			try {
+    				inventory = Bukkit.getPlayer(modifiers[2]).getInventory();
+    			}
+    			catch (Exception e) {
+    				try {
+    	    			IOP_1_7_9 offlineplayer = new IOP_1_7_9(modifiers[2]);
+    	    			inventory = offlineplayer.getInventory();
+    	    		}
+    	    		catch (Exception e1) {
+    				try {
+    	    			ImprovedOfflinePlayer offlineplayer = new ImprovedOfflinePlayer(modifiers[2]);
+    	    			inventory = offlineplayer.getInventory();
+	        		}
+	        		catch (Exception e2) {
+	        			IOP_1_7_2 offlineplayer = new IOP_1_7_2(modifiers[2]);
+	        			inventory = offlineplayer.getInventory();
+	        		}
+    	    		}
+    			}
+    		}
+    		else {
+    			inventory = player.getInventory();
+    		}
+    		if (modifiers.length>1) {
+    			ItemStack item = null;
+    			try {
+    				int slot = Integer.parseInt(modifiers[0]);
+    				inventory.setItem(slot, getItem(modifiers[1]));
+    			}
+    			catch (Exception e) {
+    				if (modifiers[0].toLowerCase().contains("enderchest")) {
+    					player.getEnderChest().setItem(Integer.parseInt(modifiers[0].split(",")[1]), getItem(modifiers[1]));
+    				}
+    				else if (modifiers[0].equalsIgnoreCase("leggings")) {
+    					inventory.setLeggings(getItem(modifiers[1]));
+    				}
+    				else if (modifiers[0].equalsIgnoreCase("helmet")) {
+    					inventory.setHelmet(getItem(modifiers[1]));
+    				}
+    				else if (modifiers[0].equalsIgnoreCase("boots")) {
+    					inventory.setBoots(getItem(modifiers[1]));
+    				}
+    				else if (modifiers[0].equalsIgnoreCase("chestplate")) {
+    					inventory.setChestplate(getItem(modifiers[1]));
+    				}
+    				else if (modifiers[0].equalsIgnoreCase("hand")) {
+    					inventory.setItem(inventory.getHeldItemSlot(), getItem(modifiers[1]));
+    				}
+    			}
+    			player.updateInventory();
+    		}
+    		return "null";
+		}
+    	
+    	@Override 
+		public String getDescription() {
+			return "{setinventory:type:{item}} - Set a player's inventory. Types:\n &7 - #\n &7 - enderchest,#\n &7 - leggings\n &7 - boots\n &7 - chestplate\n &7 - hand";
+		} });
+    	ISP.addPlaceholder(new Placeholder("setlocation") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		Location loc = getloc(modifiers[0], player);
+    		player.teleport(loc);
+    		return "null";
+		}
+    	@Override 
+		public String getDescription() {
+			return "{setlocation:LOCATION} - Teleport a player to a location";
+		} });
+    	ISP.addPlaceholder(new Placeholder("setfly") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		player.setFlying(Boolean.parseBoolean(modifiers[0]));
+    		return "null";
+		}
+    	@Override 
+		public String getDescription() {
+			return "{setfly:BOOLEAN} - set a player's fly mode";
+		} });
+    	ISP.addPlaceholder(new Placeholder("setflyspeed") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		player.setFlySpeed(Float.parseFloat(modifiers[0]));
+    		return "null";
+		}
+    	@Override 
+		public String getDescription() {
+			return "{setflyspeed:FLOAT} - set a player's fly speed";
+		} });
+    	ISP.addPlaceholder(new Placeholder("setwalkspeed") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		player.setWalkSpeed(Float.parseFloat(modifiers[0]));
+    		return "null";
+		}
+    	@Override 
+		public String getDescription() {
+			return "{setwalkspeed:FLOAT} - set a player's walk speed";
+		} });
+    	ISP.addPlaceholder(new Placeholder("setbed") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		Location loc = getloc(modifiers[0], player);
+    		player.setBedSpawnLocation(loc);
+    		return "null";
+		}
+    	@Override 
+		public String getDescription() {
+			return "{setbed:LOCATION} - set a player's bed location";
+		} });
+    	ISP.addPlaceholder(new Placeholder("setcompass") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		Location loc = getloc(modifiers[0], player);
+    		player.setCompassTarget(loc);
+    		return "null";
+		}
+    	@Override 
+		public String getDescription() {
+			return "{setcompass:LOCATION} - set a player's compass target";
+		} });
+    	ISP.addPlaceholder(new Placeholder("setname") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		player.setDisplayName(ISP.colorise(modifiers[0]));
+    		return "null";
+		}
+    	@Override 
+		public String getDescription() {
+			return "{setname:STRING} - set a player's display name";
+		} });
+    	ISP.addPlaceholder(new Placeholder("settabname") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		player.setPlayerListName(ISP.colorise(modifiers[0]));
+    		return "null";
+		}
+    	@Override 
+		public String getDescription() {
+			return "{settabname:STRING} - set a player's tab list name";
 		} });
 	}
 }

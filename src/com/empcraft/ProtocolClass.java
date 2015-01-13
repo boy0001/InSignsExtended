@@ -1,26 +1,13 @@
 package com.empcraft;
 
-import java.io.File;
-import java.io.InputStream;
-import java.lang.reflect.InvocationTargetException;
-import java.util.List;
-import java.util.logging.Logger;
-
 import org.apache.commons.lang.StringUtils;
-import org.bukkit.ChatColor;
 import org.bukkit.Location;
-import org.bukkit.Server;
-import org.bukkit.block.Sign;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.generator.ChunkGenerator;
-import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.PluginDescriptionFile;
-import org.bukkit.plugin.PluginLoader;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
-import com.avaje.ebean.EbeanServer;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
@@ -28,152 +15,141 @@ import com.comphenix.protocol.events.ListenerPriority;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
+import com.comphenix.protocol.wrappers.BlockPosition;
+import com.comphenix.protocol.wrappers.WrappedChatComponent;
 
 public class ProtocolClass {
-	InSignsPlus ISP;
-	ProtocolManager protocolmanager = null;
-	public void sendPacket(Sign sign,String[] lines, Player player) throws InvocationTargetException {
-		PacketContainer packet = protocolmanager.createPacket(PacketType.Play.Server.UPDATE_SIGN);
-		packet.getSpecificModifier(Integer.TYPE).write(0, Integer.valueOf(sign.getX()));
-		packet.getSpecificModifier(Integer.TYPE).write(1, Integer.valueOf(sign.getY()));
-		packet.getSpecificModifier(Integer.TYPE).write(2, Integer.valueOf(sign.getZ()));
-		packet.getStringArrays().write(0, lines);
-		protocolmanager.sendServerPacket(player, packet);
-	}
-	public ProtocolClass(InSignsPlus plugin) {
-		 ISP = plugin;
-		 protocolmanager = ProtocolLibrary.getProtocolManager();
-		 protocolmanager.addPacketListener(new PacketAdapter(ISP, ListenerPriority.LOW, new PacketType[] { PacketType.Play.Server.UPDATE_SIGN })
-	        {
-	        	public void onPacketSending(PacketEvent event)
-	          {
-        		boolean modified = false;
-	    	    ISP.recursion=0;
-	            PacketContainer packet = event.getPacket();
-	            packet = packet.shallowClone();
-	            int packetx = (packet.getIntegers().read(0)).intValue();
-	            short packety = (packet.getIntegers().read(1)).shortValue();
-	            int packetz = (packet.getIntegers().read(2)).intValue();
-	            String[] lines = (packet.getStringArrays().read(0));
-	            Player player = event.getPlayer();
-	            Location loc = new Location(player.getWorld(), packetx,packety,packetz);
-	            
-				String original = StringUtils.join(lines);
-				if (lines==null) {
-					return;
-				}
-				ISP.setUser(player);
-	            ISP.setSender(player);
-				SignUpdateEvent myevent = new SignUpdateEvent(player, loc, lines, null);
-		        ISP.getServer().getPluginManager().callEvent(myevent);
-		        if (myevent.isCancelled()) {
-		        	myevent.setCancelled(true);
-		        	return;
-		        }
-		        if (myevent.getLines().equals(lines)==false) {
-		        	lines = myevent.getLines();
-		        	modified = true;
-		        }
-	            boolean contains = false;
-		        for (int i = 0;i<ISP.list.size();i++) {
-		        	Location current = ISP.list.get(i);
-		        	if (current.equals(loc)) {
-		        		if (ISP.players.get(i).equals(player)) {
-		        			contains = true;
-		        			break;
-		        		}
-		        	}
-		        }
-	            if ((contains)==false) {
-					if (lines[0].equals("")==false) {
-						String result = ISP.evaluate(lines[0], false,loc);
-						if (result.equals(lines[0])==false) {
-							lines[0] = ISP.colorise(result);
-							modified = true;
-						}
-					}
-					if (lines[1].equals("")==false) {
-						String result = ISP.evaluate(lines[1], false,loc);
-						if (result.equals(lines[1])==false) {
-							lines[1] = ISP.colorise(result);
-							modified = true;
-						}
-					}
-					if (lines[2].equals("")==false) {
-						String result = ISP.evaluate(lines[2], false,loc);
-						if (result.equals(lines[2])==false) {
-							lines[2] = ISP.colorise(result);
-							modified = true;
-						}
-					}
-					if (lines[3].equals("")==false) {
-						String result = ISP.evaluate(lines[3], false,loc);
-						if (result.equals(lines[3])==false) {
-							lines[3] = ISP.colorise(result);
-							modified = true;
-						}
-					}
-					if (modified==true) {
-						for (int i = 0; i < 4; i++) {
-							if (lines[i].contains("\n")) {
-		            			if ((i < 3)) {
-		            				if (lines[i+1].isEmpty()) {
-		            					lines[i+1] = ChatColor.getLastColors(lines[i].substring(0,15))+lines[i].substring(lines[i].indexOf("\n")+1);
-		            				}
-		            			}
-		            			lines[i] = lines[i].substring(0,lines[i].indexOf("\n"));
-		            		}
-		            		if (lines[i].length()>15) {
-			            		if ((i < 3)) {
-			            			if (lines[i+1].isEmpty()) {
-			            				lines[i+1] = ChatColor.getLastColors(lines[i].substring(0,15))+lines[i].substring(15);
-			            			}
-			            		}
-			            		lines[i] = lines[i].substring(0,15);
-		            		}
-		            	}
-						if(ISP.iswhitelisted(original)) {
-							ISP.add(player, loc);
-							packet.getStringArrays().write(0, lines);
-			    			event.setPacket(packet);
-						}
-						else {
-							packet.getStringArrays().write(0, lines);
-			    			event.setPacket(packet);
-						}
-					}
-					else {
-					}
-	            }
-	            else {
-	            	lines[0] = ISP.colorise(ISP.evaluate(lines[0], false,loc));
-	            	lines[1] = ISP.colorise(ISP.evaluate(lines[1], false,loc));
-	            	lines[2] = ISP.colorise(ISP.evaluate(lines[2], false,loc));
-	            	lines[3] = ISP.colorise(ISP.evaluate(lines[3], false,loc));
-					for (int i = 0; i < 4; i++) {
-	            		if (lines[i].contains("\n")) {
-	            			if ((i < 3)) {
-	            				if (lines[i+1].isEmpty()) {
-	            					lines[i+1] = ChatColor.getLastColors(lines[i].substring(0,15))+lines[i].substring(lines[i].indexOf("\n")+1);
-	            				}
-	            			}
-	            			lines[i] = lines[i].substring(0,lines[i].indexOf("\n"));
-	            		}
-	            		if (lines[i].length()>15) {
-		            		if ((i < 3)) {
-		            			if (lines[i+1].isEmpty()) {
-		            				lines[i+1] = ChatColor.getLastColors(lines[i].substring(0,15))+lines[i].substring(15);
-		            			}
-		            		}
-		            		lines[i] = lines[i].substring(0,15);
-	            		}
-	            	}
-	            	packet.getStringArrays().write(0, lines);
-	    			event.setPacket(packet);
-	            }
-	            ISP.setUser(null);
-	            ISP.setSender(null);
-	          }
-	        });
-	 }
+    InSignsPlus ISP;
+    ProtocolManager protocolmanager = null;
+    JSONParser parser = new JSONParser();
+    
+    /**
+     * Evaluate json array (can be used for chat / signs etc)
+     * @param input
+     * @param loc
+     */
+    @SuppressWarnings({ "unchecked" })
+    public void evaluateAll(final Object input, Location loc) {
+        if ((input instanceof JSONObject)) {
+            final JSONObject object = (JSONObject) input;
+            for (final Object k : object.keySet()) {
+                final Object value = object.get(k);
+                if ((value instanceof JSONObject)) {
+                    evaluateAll(value, loc);
+                } else if ((value instanceof JSONArray)) {
+                    evaluateAll(value, loc);
+                } else if ((value instanceof String)) {
+                    final String string = value.toString();
+                    object.put(k, ISP.colorise(ISP.evaluate(string, false, loc)));
+                }
+            }
+        } else if ((input instanceof JSONArray)) {
+            final JSONArray array = (JSONArray) input;
+            for (int i = 0; i < array.size(); i++) {
+                final Object value = array.get(i);
+                if ((value instanceof JSONObject)) {
+                    evaluateAll(value, loc);
+                } else if ((value instanceof JSONArray)) {
+                    evaluateAll(value, loc);
+                } else if ((value instanceof String)) {
+                    final String string = value.toString();
+                    array.set(i, ISP.colorise(ISP.evaluate(string, false, loc)));
+                }
+            }
+        }
+    }
+    
+    public void writePacket(PacketContainer packet, String[] lines) {
+        WrappedChatComponent[] component = new WrappedChatComponent[4];
+        for (int j = 3; j >= 0; j--) {
+            if (!lines[j].equals("")) {
+                component[j] = WrappedChatComponent.fromJson(lines[j]);
+            }
+        }
+        packet.getChatComponentArrays().write(0, component);
+    }
+    
+    public ProtocolClass(InSignsPlus plugin) {
+        ISP = plugin;
+        protocolmanager = ProtocolLibrary.getProtocolManager();
+        
+        protocolmanager.addPacketListener(new PacketAdapter(ISP, ListenerPriority.LOW, PacketType.Play.Server.UPDATE_SIGN) {
+            public void onPacketSending(PacketEvent event) {
+                ISP.recursion = 0;
+                PacketContainer oldpacket = event.getPacket();
+                PacketContainer packet = oldpacket.shallowClone();
+                BlockPosition block = packet.getBlockPositionModifier().getValues().get(0);
+                
+                int packetx = block.getX();
+                int packety = block.getY();
+                int packetz = block.getZ();
+                
+                Player player = event.getPlayer();
+                Location loc = new Location(player.getWorld(), packetx, packety, packetz);
+                ISP.setUser(player);
+                ISP.setSender(player);
+                WrappedChatComponent[] component = packet.getChatComponentArrays().read(0);
+                evaluateAll(component, loc);
+                String[] lines = new String[4];
+                boolean changed = false;
+                boolean[] whitelist = new boolean[] {false, false, false, false };
+                boolean whitelisted = false;
+                for (int j = 0; j < 4; j++) {
+                    String line = component[j].getJson();
+                    if (line == null) {
+                        lines[j] = "";
+                    }
+                    else if (!line.equals("")) {
+                        Object json;
+                        try {
+                            json = parser.parse(component[j].getJson());
+                        } catch (ParseException e) {
+                            e.printStackTrace();
+                            lines[j] = "";
+                            continue;
+                        }
+                        evaluateAll(json, loc);
+                        if (ISP.iswhitelisted(line)) {
+                            whitelist[j] = true;
+                            whitelisted = true;
+                        }
+                        String newline = json.toString();
+                        if (!newline.equals(line)) {
+                            changed = true;
+                        }
+                        lines[j] = newline;
+                    }
+                    else {
+                        lines[j] = "";
+                    }
+                }
+                if (!changed && !whitelisted) {
+                    ISP.setUser(null);
+                    ISP.setSender(null);
+                    return;
+                }
+                if (whitelisted) {
+                    SignPlus sp = new SignPlus(loc, player);
+                    boolean contains = ISP.updateQueue.contains(sp);
+                    if (!contains) {
+                        // add to queue
+                        ISP.addUpdateQueue(player, loc, whitelist);
+                        ISP.setUser(null);
+                        ISP.setSender(null);
+                        return;
+                    }
+                    // send update
+                    writePacket(packet, lines);
+                    event.setPacket(packet);
+                }
+                else if (changed) {
+                    // send update
+                    writePacket(packet, lines);
+                    event.setPacket(packet);
+                }
+                ISP.setUser(null);
+                ISP.setSender(null);
+            }
+        });
+    }
 }

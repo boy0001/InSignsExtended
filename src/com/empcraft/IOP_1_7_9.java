@@ -67,8 +67,7 @@ public class IOP_1_7_9 {
   public IOP_1_7_9(String playername) {
 	try { 
 		playername = Bukkit.getOfflinePlayer(playername).getUniqueId().toString();
-		System.out.print("p2: "+playername);
-	} 
+	}
 	catch (Exception e) {
 			
 	}
@@ -79,7 +78,6 @@ public class IOP_1_7_9 {
   }
   private boolean loadPlayerData(String name) {
     try {
-    	System.out.print("PLAYER: "+name);
       this.player = name;
       for(World w : Bukkit.getWorlds()) {
         this.file = new File(w.getWorldFolder(), "playerdata" + File.separator + this.player + ".dat");

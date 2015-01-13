@@ -6,6 +6,7 @@ import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
 
 import net.milkbowl.vault.chat.Chat;
@@ -18,7 +19,7 @@ public class VaultFeature {
     private static Economy econ = null;
     private static Permission perms = null;
     private static Chat chat = null;
-	public VaultFeature(InSignsPlus plugin) {
+	public VaultFeature(InSignsPlus plugin,Plugin vault) {
 		ISP = plugin;
 		if (!setupEconomy() ) {
 			ISP.msg(null,"&c[Warning] InSignsPlus did not detect economy. Some placeholders may not work.");
@@ -26,14 +27,14 @@ public class VaultFeature {
         }
         setupPermissions();
         setupChat();
-    	ISP.addPlaceholder(new Placeholder("matchgroup") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    	ISP.addPlaceholder(new Placeholder("matchgroup",vault) { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		return matchgroup(modifiers[0]);
 		}
     	@Override 
 		public String getDescription() {
 			return "{matchgroup:STRING} - Returns the closest matching group (useful to getting the case right)";
 		} });
-    	ISP.addPlaceholder(new Placeholder("hasperm") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    	ISP.addPlaceholder(new Placeholder("hasperm",vault) { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (player==null) {
     			return "true";
     		}
@@ -49,7 +50,7 @@ public class VaultFeature {
 		public String getDescription() {
 			return "{hasperm:NODE} - Returns true if a player has the permission";
 		} });
-    	ISP.addPlaceholder(new Placeholder("prefix") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    	ISP.addPlaceholder(new Placeholder("prefix",vault) { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
     			if (Bukkit.getPlayer(modifiers[0])==null) {
     				try {
@@ -57,7 +58,7 @@ public class VaultFeature {
     	    			return chat.getPlayerPrefix(offlineplayer.getLocation().getWorld(), modifiers[0]);
     	        		}
     	        		catch (Exception e) {
-    	        			IOP_1_7_2 offlineplayer = new IOP_1_7_2(modifiers[0]);
+    	        			IOP_1_7_9 offlineplayer = new IOP_1_7_9(modifiers[0]);
     	        			return chat.getPlayerPrefix(offlineplayer.getLocation().getWorld(), modifiers[0]);
     	        		}
     			}
@@ -69,7 +70,33 @@ public class VaultFeature {
 		public String getDescription() {
 			return "{prefix:*username} - Returns a player's prefix";
 		} });
-    	ISP.addPlaceholder(new Placeholder("money") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    	ISP.addPlaceholder(new Placeholder("gprefix",vault) { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			if (Bukkit.getPlayer(modifiers[0])==null) {
+    				chat.getGroupPrefix(player.getWorld(),modifiers[0]);
+    			}
+    			return chat.getGroupPrefix(player.getWorld(),perms.getPrimaryGroup(Bukkit.getPlayer(modifiers[0])));
+    		}
+    		return chat.getGroupPrefix(player.getWorld(),perms.getPrimaryGroup(player));
+		}
+		@Override 
+		public String getDescription() {
+			return "{gprefix:*username/*group} - Returns a group's prefix";
+		} });
+    	ISP.addPlaceholder(new Placeholder("gsuffix",vault) { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    		if (modifiers.length==1) {
+    			if (Bukkit.getPlayer(modifiers[0])==null) {
+    				chat.getGroupPrefix(player.getWorld(),modifiers[0]);
+    			}
+    			return chat.getGroupSuffix(player.getWorld(),perms.getPrimaryGroup(Bukkit.getPlayer(modifiers[0])));
+    		}
+    		return chat.getGroupSuffix(player.getWorld(),perms.getPrimaryGroup(player));
+		}
+		@Override 
+		public String getDescription() {
+			return "{GSUFFIX:*username/*group} - Returns a group's suffix";
+		} });
+    	ISP.addPlaceholder(new Placeholder("money",vault) { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
     			return new DecimalFormat("######################.##").format(econ.getBalance(modifiers[0]));
     		}
@@ -79,7 +106,7 @@ public class VaultFeature {
 		public String getDescription() {
 			return "{money:*username} - Returns a player's money";
 		} });
-    	ISP.addPlaceholder(new Placeholder("group") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    	ISP.addPlaceholder(new Placeholder("group",vault) { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
     			if (Bukkit.getPlayer(modifiers[0])==null) {
     	    		try {
@@ -87,7 +114,7 @@ public class VaultFeature {
     	    			return ""+perms.getPrimaryGroup(offlineplayer.getLocation().getWorld(), modifiers[0]);
     	    		}
     	        		catch (Exception e) {
-    	        			IOP_1_7_2 offlineplayer = new IOP_1_7_2(modifiers[0]);
+    	        			IOP_1_7_9 offlineplayer = new IOP_1_7_9(modifiers[0]);
     	        			return ""+perms.getPrimaryGroup(offlineplayer.getLocation().getWorld(), modifiers[0]);
     	        		}
     			}
@@ -99,7 +126,7 @@ public class VaultFeature {
 		public String getDescription() {
 			return "{group:*username} - Returns a player's group";
 		} });
-    	ISP.addPlaceholder(new Placeholder("suffix") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    	ISP.addPlaceholder(new Placeholder("suffix",vault) { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		if (modifiers.length==1) {
     			if (Bukkit.getPlayer(modifiers[0])==null) {
     				try {
@@ -107,7 +134,7 @@ public class VaultFeature {
     	    			return chat.getPlayerSuffix(offlineplayer.getLocation().getWorld(), modifiers[0]);
     	        		}
     	        		catch (Exception e) {
-    	        			IOP_1_7_2 offlineplayer = new IOP_1_7_2(modifiers[0]);
+    	        			IOP_1_7_9 offlineplayer = new IOP_1_7_9(modifiers[0]);
     	        			return chat.getPlayerSuffix(offlineplayer.getLocation().getWorld(), modifiers[0]);
     	        		}
     			}

@@ -1,7 +1,5 @@
 package com.empcraft;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
@@ -13,9 +11,8 @@ public class SignUpdateEvent extends Event implements Cancellable {
 	private String[] lines;
 	private Player player;
 	private final Location location;
-	private static final HandlerList handlerList = new HandlerList();
+	private static HandlerList handlers = new HandlerList();
 	private boolean cancelled = false;
-	@Nullable
 	private Event event;
 	
 	SignUpdateEvent(Player player, Location location, String[] lines, Event causeEvent)
@@ -34,10 +31,14 @@ public class SignUpdateEvent extends Event implements Cancellable {
 		cancelled = true;
 	}
 	@Override
-	public HandlerList getHandlers() {
-		// TODO Auto-generated method stub
-		return handlerList;
-	}
+    public HandlerList getHandlers() {
+        return handlers;
+    }
+	
+	public static HandlerList getHandlerList() {
+        return handlers;
+    }
+	
 	public Player getPlayer() {
 		return this.player;
 	}
