@@ -1,23 +1,15 @@
 package com.empcraft;
 
-import java.text.DecimalFormat;
 import java.util.logging.Logger;
 
 import org.apache.commons.lang.StringUtils;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.RegisteredServiceProvider;
 
-import com.enjin.officialplugin.EnjinMinecraftPlugin;
 import com.enjin.officialplugin.api.EnjinAPI;
-import com.enjin.officialplugin.listeners.EnjinStatsListener;
-import com.enjin.officialplugin.points.EnjinPointsSyncClass;
 import com.enjin.officialplugin.points.ErrorConnectingToEnjinException;
 import com.enjin.officialplugin.points.PlayerDoesNotExistException;
-import com.enjin.officialplugin.threaded.EnjinRetrievePlayerTags;
-import com.enjin.proto.stats.EnjinStats;
 
 public class EnjinFeature {
 	InSignsPlus ISP;

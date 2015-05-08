@@ -1,15 +1,32 @@
-# IMPORTANT. THIS FILE CANNOT BE EDITED - instead copy and rename this - remember to change the language in the config.yml
+### ANIMATIONS ###
+# - Here are some premade example animations
+# - This animation is called 1 (it's a short name)
+# - Animations can have any name and length
+#
+# USAGE: {frames:<animation>}
+# e.g. {frames:1}
+animations:
+  1:
+  - "frame 1"
+  - "frame 2"
+  - "frame 3"
 
+### INTERACTIONS ###
+# - Here is a premade interaction
+# - The user will flip through pages when interacting with a sign
+# - This interaction is called 1 (it's a short name)
+# - Interactions can have any name and length
+#
+# USAGE: {pages:<interaction>}
+# e.g. {pages:1}
+interactions:
+  1:
+  - "page 1"
+  - "page 2"
+  - "page 3"
 
-# Put {msg:{uses}} on a sign.
-# Click the sign to go through the messages once (it will go blank when done)
-# To have it cycle through simply use {msg:{uses:8}} - as there are 8 messages here.
-# Remember to make sure {uses} is whitelisted in the config.
-0: "Click to begin"
-1: "It's a magical journey"
-2: "message 2"
-3: "Message 3"
-4: "Fourth"
-5: "Such message"
-6: "Many click"
-7: "Wow"
+### ORDINARY MESSAGES ###
+# - To get a message use {msg:<node>} on a sign. 
+# - Where <node> is one of the messages below.
+# - Add your own messages!
+blah: "message"

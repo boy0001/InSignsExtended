@@ -2,7 +2,6 @@ package com.empcraft;
 
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
 
 abstract class Keyword
 {

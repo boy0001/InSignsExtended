@@ -9,9 +9,9 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
-import java.util.Map.Entry;
 import java.util.UUID;
 
 import org.apache.commons.lang.StringUtils;
@@ -20,11 +20,9 @@ import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Sound;
 import org.bukkit.World;
-import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
-import org.bukkit.event.block.Action;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -1066,7 +1064,6 @@ public class DefaultPlaceholders {
                         return Bukkit.getPlayer(UUID.fromString(modifiers[0])).getName();
                     }
                     else if (Bukkit.getOfflinePlayer(UUID.fromString(modifiers[0])).hasPlayedBefore()) {
-                        System.out.print("OFFLINE");
                         return Bukkit.getOfflinePlayer(UUID.fromString(modifiers[0])).getName();
                     }
                     return UUID.fromString(modifiers[0]).toString()+" w";
@@ -1938,7 +1935,11 @@ public class DefaultPlaceholders {
     			return ""+a%b;
     		}
 			return "0";
-		} });
+		} 
+    	@Override 
+        public String getDescription() {
+            return "{wrap:NUMBER:VALUE} - Wrap a number between 0-VALUE";
+        }});
     	ISP.addPlaceholder(new Placeholder("isclick") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
     		return ""+ISP.getClicked();
 		}
@@ -2006,32 +2007,115 @@ public class DefaultPlaceholders {
     		return location.getWorld().getName()+","+location.getBlockX()+","+location.getBlockY()+","+location.getBlockZ();
 		} });
     	ISP.addPlaceholder(new Placeholder("uses") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
-			int maxclicks = Integer.parseInt(modifiers[0]);
-			SignPlus sp = new SignPlus(location, player);
-        	if (ISP.updateQueue.contains(sp)) {
-        		for (SignPlus current:ISP.updateQueue) {
-        			if (current.equals(sp)) {
-        				int myclicks = sp.getClicks();
-        				if (modifiers.length==1) {
-	        				if (myclicks > maxclicks) {
-		        				return ""+(myclicks%maxclicks);
-		        			}
-		        			else {
-		        				return ""+myclicks;
-		        			}
-        				}
-        				else {
-        					return ""+myclicks;
-        				}
-        			}
-        		}
+            int maxclicks;
+            if (modifiers.length == 1) {
+                maxclicks = Integer.parseInt(modifiers[0]);
+            }
+            else {
+                maxclicks = Integer.MAX_VALUE;
+            }
+            PlayerSign ps = new PlayerSign(player.getName(), location);
+            SignPlus sp = ISP.updateMap.get(ps);
+            if (sp != null) {
+                int myclicks = sp.getClicks();
+                if (modifiers.length==1) {
+                    if (myclicks > maxclicks) {
+                        return ""+(myclicks%maxclicks);
+                    }
+                    else {
+                        return ""+myclicks;
+                    }
+                }
+                else {
+                    return ""+myclicks;
+                }
+            }
+            return "0";
+        }
+        @Override 
+        public String getDescription() {
+            return "{uses} - returns the number of times the sign has been used by a player";
+        } });
+    	ISP.addPlaceholder(new Placeholder("pages") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    	    try {
+    	        if (modifiers.length != 1) {
+    	            return "";
+    	        }
+    	        List<String> pages = InSignsPlus.LANGUAGE.getStringList("interactions." + modifiers[0]);
+                if (pages == null) {
+                    return "";
+                }
+                int size = pages.size();
+                if (size == 0) {
+                    return "";
+                }
+                PlayerSign ps = new PlayerSign(player.getName(), location);
+                SignPlus sp = ISP.updateMap.get(ps);
+                if (sp == null) {
+                    return pages.get(0);
+                }
+                return pages.get(sp.getClicks() % size);
+    	    }
+        	catch (Exception e) {
+        	    e.printStackTrace();
+        	    return "";
+            }
+    	}
+        @Override 
+        public String getDescription() {
+            return "{pages:PAGE} - Returns an interaction page from the language file";
+        } });
+    	
+    	ISP.addPlaceholder(new Placeholder("frames") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+    	    try {
+    	        if (modifiers.length != 1) {
+                    return "";
+                }
+    	        List<String> frames = InSignsPlus.LANGUAGE.getStringList("animations." + modifiers[0]);
+    	        if (frames == null) {
+                    return "";
+                }
+                int size = frames.size();
+                if (size == 0) {
+                    return "";
+                }
+                return frames.get(((int) (System.currentTimeMillis() / 1000)) % size);
         	}
-			return "0";
-		}
-    	@Override 
-		public String getDescription() {
-			return "{uses} - returns the number of times the sign has been used by a player";
-		} });
+            catch (Exception e) {
+                e.printStackTrace();
+                return "";
+            }
+        }
+        @Override 
+        public String getDescription() {
+            return "{frames:ANIMATION} - Returns an animation frame from the language file";
+        } });
+    	ISP.addPlaceholder(new Placeholder("round") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+            try {
+                if (modifiers.length == 1) {
+                    return ((int) Math.round(Double.parseDouble(modifiers[0]))) + "";
+                }
+            }
+            catch (Exception e) {}
+            return null;
+        }
+        @Override 
+        public String getDescription() {
+            return "{round:NUMBER} - Round a number to nearest whole";
+        } });
+    	ISP.addPlaceholder(new Placeholder("floor") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {
+            try {
+                if (modifiers.length == 1) {
+                    return ((int) Double.parseDouble(modifiers[0])) + "";
+                }
+            }
+            catch (Exception e) {}
+            return null;
+        }
+        @Override 
+        public String getDescription() {
+            return "{floor:NUMBER} - Floor a number";
+        } });
     	if (!ISP.getConfig().getBoolean("scripting.advanced-placeholders")) { return; }
     	// TODO ADVANCED PLACEHOLDERS
     	ISP.addPlaceholder(new Placeholder("setinventory") { @Override public String getValue(Player player, Location location,String[] modifiers, Boolean elevation) {

@@ -28,6 +28,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.UUID;
+
 /*Import must be updated to match each new version*/import net.minecraft.server.v1_7_R2.AttributeMapBase;
 /*Import must be updated to match each new version*/import net.minecraft.server.v1_7_R2.AttributeMapServer;
 /*Import must be updated to match each new version*/import net.minecraft.server.v1_7_R2.GenericAttributes;
@@ -39,6 +40,7 @@ import java.util.UUID;
 /*Import must be updated to match each new version*/import net.minecraft.server.v1_7_R2.NBTTagList;
 /*Import must be updated to match each new version*/import net.minecraft.server.v1_7_R2.PlayerAbilities;
 /*Import must be updated to match each new version*/import net.minecraft.server.v1_7_R2.PlayerInventory;
+
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -51,6 +53,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
+
 import com.google.common.io.Files;
 
 /**

@@ -5,10 +5,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
-
-import javax.script.ScriptException;
+import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.Bukkit;
@@ -38,7 +36,7 @@ public class CommandManager {
     		}
     		if (args.length > 0) {
     			if (args[0].equalsIgnoreCase("updating")) {
-    				ISP.msg(player,"Signs: "+ISP.updateQueue.size());
+    				ISP.msg(player,"Signs: "+ISP.queue.size());
     				return true;
     			}
     			if (args[0].equalsIgnoreCase("if")) {
@@ -350,7 +348,7 @@ public class CommandManager {
     							ISP.msg(player, "&f &cFLOAT &7- A 32bit number supporting decimals e.g. &a12.34&7");
     						}
     						if (description.contains(":INT")) {
-    							ISP.msg(player, "&f &cINT &7A-  whole number e.g. 6");
+    							ISP.msg(player, "&f &cINT &7- A whole number e.g. 6");
     						}
     						if (description.contains(":LIST")) {
     							ISP.msg(player, "&f &cLIST &7- A series of elements separated by a comma e.g. &a1,2,3&7");
@@ -492,7 +490,7 @@ public class CommandManager {
     			        options.put("signs.autoupdate.async","Set to 'true' to have a lower impact on the server - may cause instability");
     			        options.put("signs.autoupdate.buffer",1000);
     			        options.put("signs.autoupdate.updates-per-tick",25);
-    			        List<String> whitelist = Arrays.asList("grounded","location","age","localtime","localtime12","display","uses","money","prefix","suffix","group","x","y","z","lvl","exhaustion","health","exp","hunger","air","maxhealth","maxair","gamemode","direction","biome","itemname","itemid","itemamount","durability","dead","sleeping","whitelisted","operator","sneaking","itempickup","flying","blocking","age","bed","compass","spawn","worldticks","time","date","time12","epoch","epochmilli","epochnano","online","worlds","banlist","baniplist","operators","whitelist","randchoice","rand","elevated","matchgroup","matchplayer","hasperm","js","gvar","config","passenger","lastplayed","gprefix","gsuffix");
+    			        List<String> whitelist = Arrays.asList("grounded","location","age","localtime","localtime12","display","uses","frames","pages","money","prefix","suffix","group","x","y","z","lvl","exhaustion","health","exp","hunger","air","maxhealth","maxair","gamemode","direction","biome","itemname","itemid","itemamount","durability","dead","sleeping","whitelisted","operator","sneaking","itempickup","flying","blocking","age","bed","compass","spawn","worldticks","time","date","time12","epoch","epochmilli","epochnano","online","worlds","banlist","baniplist","operators","whitelist","randchoice","rand","elevated","matchgroup","matchplayer","hasperm","js","gvar","config","passenger","lastplayed","gprefix","gsuffix");
     			        options.put("signs.autoupdate.whitelist",whitelist);
     			        for (final Entry<String, Object> node : options.entrySet()) {
     			        	 if (!ISP.getConfig().contains(node.getKey())) {

@@ -28,6 +28,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.UUID;
+
 /*Import must be updated to match each new version*/import net.minecraft.server.v1_7_R3.AttributeMapBase;
 /*Import must be updated to match each new version*/import net.minecraft.server.v1_7_R3.AttributeMapServer;
 /*Import must be updated to match each new version*/import net.minecraft.server.v1_7_R3.GenericAttributes;
@@ -39,6 +40,7 @@ import java.util.UUID;
 /*Import must be updated to match each new version*/import net.minecraft.server.v1_7_R3.NBTTagList;
 /*Import must be updated to match each new version*/import net.minecraft.server.v1_7_R3.PlayerAbilities;
 /*Import must be updated to match each new version*/import net.minecraft.server.v1_7_R3.PlayerInventory;
+
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -51,6 +53,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
+
 import com.google.common.io.Files;
 
 /**
@@ -82,7 +85,6 @@ public class IOP_1_7_9 {
       for(World w : Bukkit.getWorlds()) {
         this.file = new File(w.getWorldFolder(), "playerdata" + File.separator + this.player + ".dat");
         if (this.file.exists()==false) {
-        	System.out.print("false");
         	this.file = new File(w.getWorldFolder(), "players" + File.separator + this.player + ".dat");
         }
         if(this.file.exists()){

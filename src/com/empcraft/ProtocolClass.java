@@ -1,6 +1,5 @@
 package com.empcraft;
 
-import org.apache.commons.lang.StringUtils;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.json.simple.JSONArray;
@@ -129,14 +128,13 @@ public class ProtocolClass {
                     return;
                 }
                 if (whitelisted) {
-                    SignPlus sp = new SignPlus(loc, player);
-                    boolean contains = ISP.updateQueue.contains(sp);
-                    if (!contains) {
+                    PlayerSign ps = new PlayerSign(player.getName(), loc);
+                    SignPlus sp = ISP.updateMap.get(ps);
+                    if (sp == null) {
                         // add to queue
                         ISP.addUpdateQueue(player, loc, whitelist);
                         ISP.setUser(null);
                         ISP.setSender(null);
-                        return;
                     }
                     // send update
                     writePacket(packet, lines);
