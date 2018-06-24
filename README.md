@@ -1,3 +1,3 @@
 InSignsPlus
 ===============
-http://dev.bukkit.org/bukkit-plugins/isp/
+https://www.spigotmc.org/resources/individual-signs-plus.6818/
